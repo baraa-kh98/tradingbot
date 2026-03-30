@@ -1,12 +1,12 @@
 """
 ICT Trading Bot — البوت الرئيسي
 
-يستخدم استراتيجية ICT (Inner Circle Trader):
-1. تحليل Market Structure على HTF
-2. كشف Order Blocks, FVG, Liquidity على LTF
-3. حساب نقاط الالتقاء (Confluence)
-4. تنفيذ الصفقة على OANDA
-5. إرسال تقرير على Telegram
+يستخدم:
+- Twelve Data: لجلب البيانات
+- MetaTrader 5: لتنفيذ الصفقات
+- استراتيجية ICT: Market Structure, OB, FVG, Liquidity
+- Claude AI: تحليل ماكرو (اختياري)
+- Telegram: إرسال التقارير والإشعارات
 """
 
 from data.data_feed import DataFeed
@@ -18,8 +18,6 @@ from execution.executor import Executor
 from notifier import Notifier
 from config import (
     CLAUDE_API_KEY,
-    OANDA_API_KEY,
-    ACCOUNT_ID,
     TELEGRAM_TOKEN,
     TELEGRAM_CHAT_ID,
     BALANCE,
@@ -27,7 +25,6 @@ from config import (
     MIN_RR_RATIO,
     USE_MACRO_FILTER,
     MACRO_MIN_SCORE,
-    OANDA_DEMO,
 )
 
 
@@ -37,9 +34,26 @@ def run_bot():
     notifier = Notifier(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
     notifier.send("🤖 البوت شغّال — تحليل ICT...")
 
-    # ═══════════════════════════════════════════════════════
-    # 1. جلب البيانات (Multi-Timeframe)
-    # ═══════════════════════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════
+    # 1. الاتصال بـ MT5
+    # ═══════════════════════════════════════════════════════════
+
+    executor = Executor()
+    if not executor.connect():
+        notifier.send("❌ فشل الاتصال بـ MT5!")
+        return
+
+    account = executor.get_account_info()
+    if account:
+        notifier.send(
+            f"💰 الحساب: {account['login']}\n"
+            f"الرصيد: ${account['balance']:.2f}\n"
+            f"{'🟢 Demo' if account['is_demo'] else '🔴 Real'}"
+        )
+
+    # ═══════════════════════════════════════════════════════════
+    # 2. جلب البيانات (Multi-Timeframe)
+    # ═══════════════════════════════════════════════════════════
 
     feed = DataFeed()
 
@@ -47,17 +61,24 @@ def run_bot():
         htf_data = feed.get_htf_data()
         ltf_data = feed.get_ltf_data()
         current_price = feed.get_latest_price()
+
+        if htf_data is None or ltf_data is None:
+            notifier.send("❌ فشل جلب البيانات!")
+            executor.disconnect()
+            return
+
         notifier.send(f"📊 السعر الحالي: {current_price}")
     except Exception as e:
         notifier.send(f"❌ خطأ في جلب البيانات: {e}")
+        executor.disconnect()
         return
 
-    # ═══════════════════════════════════════════════════════
-    # 2. تحليل الماكرو (اختياري)
-    # ═══════════════════════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════
+    # 3. تحليل الماكرو (اختياري)
+    # ═══════════════════════════════════════════════════════════
 
     macro_result = None
-    if USE_MACRO_FILTER:
+    if USE_MACRO_FILTER and CLAUDE_API_KEY:
         try:
             macro = MacroAnalyzer(CLAUDE_API_KEY)
             macro_result = macro.analyze()
@@ -73,9 +94,9 @@ def run_bot():
         except Exception as e:
             notifier.send(f"⚠️ خطأ في تحليل الماكرو (مكمّلين): {e}")
 
-    # ═══════════════════════════════════════════════════════
-    # 3. تحليل ICT وتوليد الإشارة
-    # ═══════════════════════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════
+    # 4. تحليل ICT وتوليد الإشارة
+    # ═══════════════════════════════════════════════════════════
 
     try:
         signal_gen = ICTSignalGenerator(htf_data, ltf_data)
@@ -87,18 +108,21 @@ def run_bot():
         notifier.send(full_report)
     except Exception as e:
         notifier.send(f"❌ خطأ في تحليل ICT: {e}")
+        executor.disconnect()
         return
 
-    # ═══════════════════════════════════════════════════════
-    # 4. اتخاذ القرار
-    # ═══════════════════════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════
+    # 5. اتخاذ القرار
+    # ═══════════════════════════════════════════════════════════
 
     if signal["action"] == "WAIT":
         notifier.send("⏳ لا توجد فرصة حالياً — البوت ينتظر...")
+        executor.disconnect()
         return
 
     if levels is None:
         notifier.send("⚠️ لم يتم تحديد مستويات واضحة — البوت ينتظر...")
+        executor.disconnect()
         return
 
     final_action = signal["action"]
@@ -107,18 +131,23 @@ def run_bot():
     if USE_MACRO_FILTER and macro_result:
         if macro_result["bias"] == "BULLISH" and final_action == "SELL":
             if abs(macro_result["score"]) > 50:
-                notifier.send("⚠️ ICT يقول SELL لكن الماكرو BULLISH قوي — البوت ينتظر...")
+                notifier.send("⚠️ ICT=SELL لكن الماكرو BULLISH قوي — ينتظر...")
+                executor.disconnect()
                 return
         elif macro_result["bias"] == "BEARISH" and final_action == "BUY":
             if abs(macro_result["score"]) > 50:
-                notifier.send("⚠️ ICT يقول BUY لكن الماكرو BEARISH قوي — البوت ينتظر...")
+                notifier.send("⚠️ ICT=BUY لكن الماكرو BEARISH قوي — ينتظر...")
+                executor.disconnect()
                 return
 
-    # ═══════════════════════════════════════════════════════
-    # 5. إدارة المخاطر
-    # ═══════════════════════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════
+    # 6. إدارة المخاطر
+    # ═══════════════════════════════════════════════════════════
 
-    rm = RiskManager(balance=BALANCE, risk_percent=RISK_PERCENT)
+    # استخدام رصيد الحساب الحقيقي إذا متصل
+    balance = account["balance"] if account else BALANCE
+
+    rm = RiskManager(balance=balance, risk_percent=RISK_PERCENT)
     trade_info = rm.get_trade_info(
         levels["entry"],
         levels["stop_loss"],
@@ -130,37 +159,53 @@ def run_bot():
             f"⚠️ نسبة الربح/الخسارة ضعيفة ({trade_info['rr_ratio']}) "
             f"— الحد الأدنى: {MIN_RR_RATIO}"
         )
+        executor.disconnect()
         return
 
-    # ═══════════════════════════════════════════════════════
-    # 6. تنفيذ الصفقة
-    # ═══════════════════════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════
+    # 7. تنفيذ الصفقة على MT5
+    # ═══════════════════════════════════════════════════════════
+
+    # تحويل حجم الصفقة لـ lots
+    # position_size من risk_manager = وحدات العملة
+    # MT5 يحتاج lots (1 lot = 100,000 وحدة)
+    lots = round(trade_info["position_size"] / 100000, 2)
+    lots = max(lots, 0.01)  # minimum lot
 
     notifier.send(
-        f"🚀 تنفيذ صفقة ICT:\n"
+        f"🚀 تنفيذ صفقة ICT على MT5:\n"
         f"━━━━━━━━━━━━━━━━━━\n"
         f"📍 الاتجاه: {final_action}\n"
         f"💰 الدخول: {levels['entry']}\n"
         f"🛑 وقف الخسارة: {levels['stop_loss']}\n"
         f"🎯 هدف الربح: {levels['take_profit']}\n"
         f"📐 RR: 1:{levels['rr_ratio']}\n"
-        f"📦 الحجم: {trade_info['position_size']}\n"
+        f"📦 الحجم: {lots} lots\n"
         f"💵 المخاطرة: ${trade_info['risk_amount']}\n"
         f"🔑 نوع الدخول: {levels['entry_type']}\n"
         f"📊 الالتقاء: {signal['confluence_score']}/100"
     )
 
     try:
-        executor = Executor(OANDA_API_KEY, ACCOUNT_ID, demo=OANDA_DEMO)
-        executor.place_order(
-            final_action,
-            int(trade_info["position_size"]),
-            levels["stop_loss"],
-            levels["take_profit"]
+        result = executor.place_order(
+            signal=final_action,
+            lots=lots,
+            stop_loss=levels["stop_loss"],
+            take_profit=levels["take_profit"],
         )
-        notifier.send("✅ تم تنفيذ الصفقة على OANDA بنجاح!")
+
+        if result:
+            notifier.send(
+                f"✅ تم تنفيذ الصفقة!\n"
+                f"Ticket: #{result['ticket']}\n"
+                f"السعر: {result['price']}"
+            )
+        else:
+            notifier.send("❌ فشل تنفيذ الصفقة على MT5")
     except Exception as e:
-        notifier.send(f"❌ خطأ في تنفيذ الصفقة: {e}")
+        notifier.send(f"❌ خطأ في التنفيذ: {e}")
+
+    executor.disconnect()
 
 
 if __name__ == "__main__":

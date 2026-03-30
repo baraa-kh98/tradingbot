@@ -1,0 +1,29 @@
+# ═══════════════════════════════════════════
+# متطلبات بوت ICT Trading
+# ═══════════════════════════════════════════
+
+# الأساسيات
+pandas>=2.0
+numpy>=1.24
+python-dotenv>=1.0
+
+# بيانات الأسعار
+twelvedata>=1.2             # مصدر البيانات الأساسي (مدفوع)
+yfinance>=0.2               # Fallback مجاني
+
+# التنفيذ (على VPS Windows فقط)
+MetaTrader5>=5.0.45         # يعمل فقط على Windows
+
+# الماكرو والتحليل
+anthropic>=0.20             # Claude AI
+requests>=2.31              # HTTP requests (Telegram)
+
+# Kill Zones
+pytz>=2024.1
+
+# الباكتست
+backtesting>=0.3.3
+
+# لقطات الشارت (المرحلة 5)
+# mplfinance>=0.12
+# matplotlib>=3.8
