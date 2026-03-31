@@ -58,17 +58,35 @@ class RiskManager:
     def calculate_position_size(self, entry, stop_loss):
         """حساب حجم الصفقة بناءً على المخاطرة"""
         risk_amount = self.balance * (self.risk_percent / 100)
-        pips_at_risk = abs(entry - stop_loss)
-        if pips_at_risk == 0:
-            return 0
-        position_size = round(risk_amount / pips_at_risk, 2)
-        return position_size
+        sl_distance_price = abs(entry - stop_loss)
+        if sl_distance_price == 0:
+            return 0, risk_amount
+
+        # حساب عدد النقاط
+        sl_pips = sl_distance_price / PIP_VALUE
+
+        # قيمة النقطة الواحدة لكل لوت قياسي (100,000 وحدة)
+        # لأزواج JPY: pip = 0.01, pip_value_per_lot = 100000 * 0.01 / سعر = ~$6.25
+        # لأزواج USD: pip = 0.0001, pip_value_per_lot = 100000 * 0.0001 = $10
+        if PIP_VALUE >= 0.01:
+            # أزواج الين — القيمة تعتمد على السعر
+            pip_value_per_lot = (100000 * PIP_VALUE) / entry
+        else:
+            # أزواج الدولار (EURUSD, GBPUSD)
+            pip_value_per_lot = 100000 * PIP_VALUE
+
+        # حجم اللوت = المخاطرة / (عدد النقاط × قيمة النقطة لكل لوت)
+        lots = risk_amount / (sl_pips * pip_value_per_lot)
+        lots = round(lots, 2)
+
+        return lots, risk_amount
 
     def calculate_lots(self, entry, stop_loss):
         """حساب حجم اللوت (لـ MT5)"""
-        position_size = self.calculate_position_size(entry, stop_loss)
-        lots = round(position_size / 100000, 2)
-        return max(lots, 0.01)  # minimum 0.01 lot
+        lots, risk_amount = self.calculate_position_size(entry, stop_loss)
+        lots = max(lots, 0.01)  # minimum 0.01 lot
+        lots = min(lots, 5.0)   # maximum 5 lots for safety
+        return lots
 
     def calculate_rr(self, entry, stop_loss, take_profit):
         """حساب نسبة الربح/الخسارة"""
@@ -295,7 +313,7 @@ class RiskManager:
 
     def get_trade_info(self, entry, stop_loss, take_profit):
         """معلومات الصفقة الكاملة"""
-        size = self.calculate_position_size(entry, stop_loss)
+        lots_calc, risk_amount = self.calculate_position_size(entry, stop_loss)
         lots = self.calculate_lots(entry, stop_loss)
         rr = self.calculate_rr(entry, stop_loss, take_profit)
         valid = self.is_trade_valid(entry, stop_loss, take_profit)
@@ -303,12 +321,21 @@ class RiskManager:
         direction = "BUY" if take_profit > entry else "SELL"
         tp_levels = self.get_tp_levels(entry, stop_loss, direction) if self.partial_tp_enabled else None
 
+        # حساب المخاطرة الفعلية بالحجم المستخدم
+        sl_pips = abs(entry - stop_loss) / PIP_VALUE
+        if PIP_VALUE >= 0.01:
+            pip_value_per_lot = (100000 * PIP_VALUE) / entry
+        else:
+            pip_value_per_lot = 100000 * PIP_VALUE
+        actual_risk = round(sl_pips * pip_value_per_lot * lots, 2)
+
         return {
-            "position_size": size,
+            "position_size": lots_calc,
             "lots": lots,
             "rr_ratio": rr,
             "trade_valid": valid,
-            "risk_amount": round(self.balance * self.risk_percent / 100, 2),
+            "risk_amount": actual_risk,
+            "target_risk": round(risk_amount, 2),
             "direction": direction,
             "tp_levels": tp_levels,
         }
