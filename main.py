@@ -340,11 +340,21 @@ if __name__ == "__main__":
         except Exception as e:
             return f"❌ {e}"
 
+    def cmd_scan(args=None):
+        try:
+            from strategy.multi_pair import MultiPairScanner
+            dash_scanner = MultiPairScanner()
+            dash_scanner.scan_all()
+            return dash_scanner.get_report()
+        except Exception as e:
+            return f"❌ خطأ في فحص الأزواج: {e}"
+
     dashboard.register_handler("report", cmd_report)
     dashboard.register_handler("analyze", cmd_analyze)
     dashboard.register_handler("lessons", cmd_lessons)
     dashboard.register_handler("pairs", cmd_pairs)
     dashboard.register_handler("news", cmd_news)
+    dashboard.register_handler("scan", cmd_scan)
 
     dashboard.start_polling()
 
