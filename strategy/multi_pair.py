@@ -153,7 +153,7 @@ class DataFeed:
 
     def __init__(self, symbol_td=None, pip_value=None):
         from data.data_feed import DataFeed as OriginalFeed
-        self._feed = OriginalFeed()
+        self._feed = OriginalFeed(symbol=symbol_td)
         self._symbol_td = symbol_td
         self._pip_value = pip_value
 
@@ -161,7 +161,6 @@ class DataFeed:
         if self._symbol_td:
             from config import HTF_INTERVAL, HTF_PERIOD_DAYS
             return self._feed.get_candles(
-                symbol=self._symbol_td,
                 interval=HTF_INTERVAL,
                 period_days=HTF_PERIOD_DAYS,
             )
@@ -171,7 +170,6 @@ class DataFeed:
         if self._symbol_td:
             from config import LTF_INTERVAL, LTF_PERIOD_DAYS
             return self._feed.get_candles(
-                symbol=self._symbol_td,
                 interval=LTF_INTERVAL,
                 period_days=LTF_PERIOD_DAYS,
             )
