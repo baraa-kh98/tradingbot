@@ -81,17 +81,28 @@ class Executor:
                 print("   3. MT5 و Python بنفس الصلاحيات")
                 return False
 
-        # تسجيل الدخول
+        # تسجيل الدخول — فقط إذا مش مسجّل أصلاً
         if self.login and self.password and self.server:
-            authorized = self.mt5.login(
-                login=self.login,
-                password=self.password,
-                server=self.server
-            )
-            if not authorized:
-                print(f"❌ فشل تسجيل الدخول: {self.mt5.last_error()}")
-                self.mt5.shutdown()
-                return False
+            # تحقق إذا الحساب الصحيح أصلاً مفتوح
+            account = self.mt5.account_info()
+            if account and account.login == self.login:
+                print(f"ℹ️ الحساب {self.login} أصلاً مسجّل دخول — تخطّي login()")
+            else:
+                print(f"🔑 جاري تسجيل الدخول: {self.login}@{self.server}")
+                authorized = self.mt5.login(
+                    login=self.login,
+                    password=self.password,
+                    server=self.server
+                )
+                if not authorized:
+                    print(f"❌ فشل تسجيل الدخول: {self.mt5.last_error()}")
+                    # لسا ممكن نكمل بالحساب الحالي
+                    account = self.mt5.account_info()
+                    if account:
+                        print(f"ℹ️ مكمّلين بالحساب الحالي: {account.login}")
+                    else:
+                        self.mt5.shutdown()
+                        return False
 
         self.connected = True
         account = self.mt5.account_info()
