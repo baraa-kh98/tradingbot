@@ -7,6 +7,8 @@ ICT Signal Generator — مولّد إشارات ICT
 
 from strategy.ict_core import run_full_ict_analysis
 from strategy.ict_advanced import run_advanced_ict_analysis
+from strategy.volatility import VolatilityAnalyzer
+from strategy.order_flow import OrderFlowAnalyzer
 from strategy.kill_zones import is_kill_zone, get_current_session
 from config import (
     SWING_LOOKBACK,
@@ -56,6 +58,10 @@ class ICTSignalGenerator:
 
         # تحليل متقدم
         self.advanced = run_advanced_ict_analysis(self.ltf_data, self.ltf_analysis)
+
+        # تحليل التقلبات والأوردر فلو
+        self.vol_analyzer = VolatilityAnalyzer(self.ltf_data)
+        self.flow_analyzer = OrderFlowAnalyzer(self.ltf_data)
 
         # حالة الجلسة
         self.session = get_current_session()
@@ -281,7 +287,7 @@ class ICTSignalGenerator:
                 reasons.append(f"⚠️ AMD يعارض: {amd['phase']} → {amd['bias']}")
 
         # ──────────────────────────────────────────────
-        # 10. Inducement (5 نقاط) — جديد
+        # 10. Inducement (5 نقاط)
         # ──────────────────────────────────────────────
         inducements = self.advanced.get("inducements", [])
         for ind in inducements:
@@ -293,6 +299,50 @@ class ICTSignalGenerator:
                 score += 5
                 reasons.append(f"🪤 Inducement bearish عند {ind['level']:.3f}")
                 break
+
+        # ──────────────────────────────────────────────
+        # 11. Order Flow (10 نقاط) — جديد
+        # ──────────────────────────────────────────────
+        try:
+            flow_bias, flow_score, flow_reasons = self.flow_analyzer.get_bias()
+            if direction == "BUY" and flow_bias == "BULLISH":
+                score += 10
+                reasons.append(f"📊 Order Flow يؤكد شراء (Delta +{flow_score})")
+            elif direction == "SELL" and flow_bias == "BEARISH":
+                score += 10
+                reasons.append(f"📊 Order Flow يؤكد بيع (Delta {flow_score})")
+
+            # Divergence
+            delta = self.flow_analyzer.estimate_delta()
+            if delta.get("divergence"):
+                if direction == "BUY" and delta["divergence_type"] == "BULLISH_DIV":
+                    score += 5
+                    reasons.append("🔄 Divergence صعودي في Order Flow")
+                elif direction == "SELL" and delta["divergence_type"] == "BEARISH_DIV":
+                    score += 5
+                    reasons.append("🔄 Divergence هبوطي في Order Flow")
+        except Exception:
+            pass
+
+        # ──────────────────────────────────────────────
+        # 12. Volatility (5 نقاط أو -5) — جديد
+        # ──────────────────────────────────────────────
+        try:
+            squeeze = self.vol_analyzer.detect_squeeze()
+            if squeeze.get("squeeze") and squeeze["squeeze_bars"] >= 3:
+                if direction == "BUY" and squeeze["momentum_bias"] == "BULLISH":
+                    score += 5
+                    reasons.append(f"🔋 Squeeze ({squeeze['squeeze_bars']} bars) → انفجار صعودي")
+                elif direction == "SELL" and squeeze["momentum_bias"] == "BEARISH":
+                    score += 5
+                    reasons.append(f"🔋 Squeeze ({squeeze['squeeze_bars']} bars) → انفجار هبوطي")
+
+            regime = self.vol_analyzer.get_volatility_regime()
+            if regime["regime"] == "HIGH" and regime["ratio"] > 1.5:
+                score -= 5
+                reasons.append(f"⚠️ تقلبات عالية ({regime['ratio']}x) — حذر!")
+        except Exception:
+            pass
 
         return score, reasons
 
@@ -507,6 +557,16 @@ class ICTSignalGenerator:
         if advanced_lines:
             report_lines.append("\n── ICT متقدم ──")
             report_lines.extend(advanced_lines)
+
+        # تقرير التقلبات والأوردر فلو
+        try:
+            report_lines.append("\n" + self.vol_analyzer.get_report())
+        except Exception:
+            pass
+        try:
+            report_lines.append("\n" + self.flow_analyzer.get_report())
+        except Exception:
+            pass
 
         report_lines.append(f"\n🎬 الإشارة: {signal['action']}")
 
