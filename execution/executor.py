@@ -42,10 +42,44 @@ class Executor:
             print("   ⚠️ يعمل فقط على Windows مع MT5 مفتوح")
             return False
 
-        # تهيئة MT5
+        # تهيئة MT5 — محاولة بدون مسار أولاً
         if not self.mt5.initialize():
-            print(f"❌ فشل تهيئة MT5: {self.mt5.last_error()}")
-            return False
+            print(f"⚠️ فشل تهيئة MT5 بدون مسار: {self.mt5.last_error()}")
+            print("🔍 جاري البحث عن MT5...")
+
+            # البحث التلقائي عن terminal64.exe
+            import os
+            mt5_found = False
+            search_dirs = []
+            for drive in ["C:", "D:"]:
+                for pf in ["Program Files", "Program Files (x86)"]:
+                    d = f"{drive}\\{pf}"
+                    if os.path.exists(d):
+                        search_dirs.append(d)
+
+            for search_dir in search_dirs:
+                try:
+                    for folder in os.listdir(search_dir):
+                        path = os.path.join(search_dir, folder, "terminal64.exe")
+                        if os.path.exists(path):
+                            print(f"   📍 وجدت MT5: {path}")
+                            if self.mt5.initialize(path=path):
+                                mt5_found = True
+                                print(f"   ✅ تم الاتصال!")
+                                break
+                            else:
+                                print(f"   ❌ فشل: {self.mt5.last_error()}")
+                except PermissionError:
+                    continue
+                if mt5_found:
+                    break
+
+            if not mt5_found:
+                print("❌ فشل تهيئة MT5! تأكد إن:")
+                print("   1. برنامج MT5 مفتوح ومسجّل دخول")
+                print("   2. شغّل CMD كـ Administrator")
+                print("   3. MT5 و Python بنفس الصلاحيات")
+                return False
 
         # تسجيل الدخول
         if self.login and self.password and self.server:
