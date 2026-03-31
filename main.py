@@ -348,6 +348,11 @@ if __name__ == "__main__":
             return dash_scanner.get_report()
         except Exception as e:
             return f"❌ خطأ في فحص الأزواج: {e}"
+    def cmd_optimize(args=None):
+        try:
+            return getattr(optimizer_self, "get_report")()
+        except Exception as e:
+            return f"❌ خطأ في التحسين: {e}"
 
     dashboard.register_handler("report", cmd_report)
     dashboard.register_handler("analyze", cmd_analyze)
@@ -355,6 +360,7 @@ if __name__ == "__main__":
     dashboard.register_handler("pairs", cmd_pairs)
     dashboard.register_handler("news", cmd_news)
     dashboard.register_handler("scan", cmd_scan)
+    dashboard.register_handler("optimize", cmd_optimize)
 
     dashboard.start_polling()
 
