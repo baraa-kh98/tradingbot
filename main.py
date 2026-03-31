@@ -20,6 +20,7 @@ from strategy.self_optimizer import SelfOptimizer
 from execution.executor import Executor
 from notifier import Notifier
 from telegram_dashboard import TelegramDashboard
+from data.market_intelligence import MarketIntelligence
 from config import (
     CLAUDE_API_KEY,
     TELEGRAM_TOKEN,
@@ -82,21 +83,25 @@ def run_bot():
     # ═══════════════════════════════════════════════════════════
 
     macro_result = None
-    if USE_MACRO_FILTER and CLAUDE_API_KEY:
-        try:
-            macro = MacroAnalyzer(CLAUDE_API_KEY)
-            macro_result = macro.analyze()
-            notifier.send(
-                f"🌐 تحليل الماكرو:\n"
-                f"Score: {macro_result['score']}\n"
-                f"Bias: {macro_result['bias']}\n"
-                f"السبب: {macro_result['reason']}"
-            )
 
-            if abs(macro_result["score"]) < MACRO_MIN_SCORE:
-                notifier.send("⚠️ الماكرو محايد — يُؤخذ بعين الاعتبار")
-        except Exception as e:
-            notifier.send(f"⚠️ خطأ في تحليل الماكرو (مكمّلين): {e}")
+    # ذكاء السوق الشامل (FinnHub + DXY + VIX + قوة العملات)
+    intel = MarketIntelligence()
+    try:
+        can_trade, blockers, intel_data = intel.should_trade()
+
+        # إرسال تقرير ذكاء السوق
+        notifier.send(intel.get_report())
+
+        if not can_trade:
+            notifier.send(f"🚫 ظروف غير مناسبة:\n" + "\n".join(blockers))
+            executor.disconnect()
+            return
+
+        # استخدام ميل ذكاء السوق كـ macro filter
+        intel_bias, intel_score, _ = intel.get_usdjpy_bias()
+        macro_result = {"bias": intel_bias, "score": intel_score}
+    except Exception as e:
+        print(f"⚠️ خطأ في ذكاء السوق (مكمّلين): {e}")
 
     # ═══════════════════════════════════════════════════════════
     # 4. تحليل ICT وتوليد الإشارة
@@ -337,10 +342,18 @@ if __name__ == "__main__":
         lines.append("\nلتفعيل/تعطيل: عدّل config.py")
         return "\n".join(lines)
 
+    def cmd_news(args=None):
+        try:
+            intel = MarketIntelligence()
+            return intel.get_report()
+        except Exception as e:
+            return f"❌ {e}"
+
     dashboard.register_handler("report", cmd_report)
     dashboard.register_handler("analyze", cmd_analyze)
     dashboard.register_handler("lessons", cmd_lessons)
     dashboard.register_handler("pairs", cmd_pairs)
+    dashboard.register_handler("news", cmd_news)
 
     dashboard.start_polling()
 

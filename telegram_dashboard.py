@@ -129,6 +129,7 @@ class TelegramDashboard:
             "📊 /status — حالة البوت\n"
             "📈 /report — تقرير الأداء\n"
             "🔍 /analyze — تحليل ICT الآن\n"
+            "📰 /news — ذكاء السوق (أخبار + سنتيمنت)\n"
             "🌍 /scan — فحص جميع الأزواج\n"
             "⚙️ /pairs — الأزواج المفعّلة\n"
             "🧠 /optimize — تحسين المعاملات\n"

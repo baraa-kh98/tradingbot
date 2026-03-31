@@ -35,6 +35,9 @@ OANDA_ACCOUNT_ID = os.getenv("OANDA_ACCOUNT_ID", "")
 # FRED (بيانات ماكرو تاريخية)
 FRED_API_KEY = os.getenv("FRED_API_KEY", "")
 
+# FinnHub (أخبار + تقويم اقتصادي)
+FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
+
 
 # ═══════════════════════════════════════════════════════════════
 # Trading Pairs — أزواج متعددة
