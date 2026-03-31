@@ -97,160 +97,155 @@ def run_bot():
             if pcfg["mt5"] in str(getattr(pos, "symbol", "")):
                 open_pairs.add(pname)
 
-    # اختيار أفضل فرصة مع فلتر الارتباط
-    best = scanner.get_best_opportunity(open_pairs=open_pairs)
+    # اختيار أفضل الفرص مع الفلاتر الجديدة
+    opportunities = scanner.get_best_opportunities(open_pairs=open_pairs)
 
-    if best is None:
+    if not opportunities:
         notifier.send("⏳ لا توجد فرص بالتقاء كافي — ننتظر...")
         executor.disconnect()
         return
 
     # ═══════════════════════════════════════════════════════════
-    # 4. تنفيذ أفضل فرصة
+    # 4. تنفيذ الفرص المتاحة بالتتابع
     # ═══════════════════════════════════════════════════════════
 
-    pair_name = best["pair"]
-    pair_config = best["config"]
-    signal = best
-    levels = best["levels"]
-    final_action = best["action"]
+    for best in opportunities:
+        pair_name = best["pair"]
+        pair_config = best["config"]
+        signal = best
+        levels = best["levels"]
+        final_action = best["action"]
 
-    notifier.send(
-        f"🏆 أفضل فرصة: {pair_name}\n"
-        f"📍 {final_action} | التقاء: {best['score']}/140"
-    )
-
-    if levels is None:
-        notifier.send(f"⚠️ لم يتم تحديد مستويات لـ {pair_name}")
-        executor.disconnect()
-        return
-
-    # فلتر الماكرو
-    if macro_result:
-        if macro_result["bias"] == "BULLISH" and final_action == "SELL":
-            if abs(macro_result["score"]) > 50:
-                notifier.send("⚠️ ICT=SELL لكن ذكاء السوق BULLISH قوي — ينتظر...")
-                executor.disconnect()
-                return
-        elif macro_result["bias"] == "BEARISH" and final_action == "BUY":
-            if abs(macro_result["score"]) > 50:
-                notifier.send("⚠️ ICT=BUY لكن ذكاء السوق BEARISH قوي — ينتظر...")
-                executor.disconnect()
-                return
-
-    # ═══════════════════════════════════════════════════════════
-    # 6. إدارة المخاطر المتقدمة
-    # ═══════════════════════════════════════════════════════════
-
-    # استخدام رصيد الحساب الحقيقي إذا متصل
-    balance = account["balance"] if account else BALANCE
-
-    rm = RiskManager(balance=balance, risk_percent=RISK_PERCENT)
-
-    # فحص الحدود اليومية
-    open_positions = executor.get_open_positions()
-    can_trade, trade_reason = rm.can_trade(len(open_positions))
-    if not can_trade:
-        notifier.send(f"{trade_reason}")
-        executor.disconnect()
-        return
-
-    trade_info = rm.get_trade_info(
-        levels["entry"],
-        levels["stop_loss"],
-        levels["take_profit"]
-    )
-
-    if not trade_info["trade_valid"]:
         notifier.send(
-            f"⚠️ نسبة الربح/الخسارة ضعيفة ({trade_info['rr_ratio']}) "
-            f"— الحد الأدنى: {MIN_RR_RATIO}"
-        )
-        executor.disconnect()
-        return
-
-    # ═══════════════════════════════════════════════════════════
-    # 7. تنفيذ الصفقة على MT5
-    # ═══════════════════════════════════════════════════════════
-
-    lots = trade_info["lots"]
-
-    # TP متعدد
-    tp_info = ""
-    tp_levels = trade_info.get("tp_levels")
-    if tp_levels:
-        tp_info = (
-            f"\n🎯 TP1: {tp_levels['tp1']} ({tp_levels['tp1_rr']}R) — أغلق {int(tp_levels['tp1_close_ratio']*100)}%"
-            f"\n🎯 TP2: {tp_levels['tp2']} ({tp_levels['tp2_rr']}R) — الباقي"
-            f"\n🔒 Break-Even عند 1R"
-            f"\n📈 Trailing Stop بعد 1.5R"
+            f"🏆 فرصة جديدة مفعّلة: {pair_name}\n"
+            f"📍 {final_action} | التقاء: {best['score']}/140"
         )
 
-    notifier.send(
-        f"🚀 تنفيذ صفقة ICT على MT5:\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"🌍 الزوج: {pair_name}\n"
-        f"📍 الاتجاه: {final_action}\n"
-        f"💰 الدخول: {levels['entry']}\n"
-        f"🛑 وقف الخسارة: {levels['stop_loss']}\n"
-        f"🎯 هدف الربح: {levels['take_profit']}\n"
-        f"📐 RR: 1:{levels['rr_ratio']}\n"
-        f"📦 الحجم: {lots} lots\n"
-        f"💵 المخاطرة: ${trade_info['risk_amount']}\n"
-        f"🔑 نوع الدخول: {levels['entry_type']}\n"
-        f"📊 الالتقاء: {best['score']}/140"
-        f"{tp_info}"
-    )
+        if levels is None:
+            notifier.send(f"⚠️ لم يتم تحديد مستويات لـ {pair_name}")
+            continue
 
-    try:
-        result = executor.place_order(
-            signal=final_action,
-            lots=lots,
-            stop_loss=levels["stop_loss"],
-            take_profit=levels["take_profit"],
-            entry_price=levels["entry"],
-            symbol=pair_config["mt5"],
+        # فلتر الماكرو
+        if macro_result:
+            if macro_result["bias"] == "BULLISH" and final_action == "SELL":
+                if abs(macro_result["score"]) > 50:
+                    notifier.send("⚠️ ICT=SELL لكن ذكاء السوق BULLISH قوي — يتخطى...")
+                    continue
+            elif macro_result["bias"] == "BEARISH" and final_action == "BUY":
+                if abs(macro_result["score"]) > 50:
+                    notifier.send("⚠️ ICT=BUY لكن ذكاء السوق BEARISH قوي — يتخطى...")
+                    continue
+
+        # ═══════════════════════════════════════════════════════════
+        # 6. إدارة المخاطر المتقدمة
+        # ═══════════════════════════════════════════════════════════
+
+        # استخدام رصيد الحساب الحقيقي إذا متصل
+        balance = account["balance"] if account else BALANCE
+        rm = RiskManager(balance=balance, risk_percent=RISK_PERCENT)
+
+        # فحص الحدود اليومية
+        open_positions = executor.get_open_positions()
+        can_trade, trade_reason = rm.can_trade(len(open_positions))
+        if not can_trade:
+            notifier.send(f"{trade_reason}")
+            break  # توقف عن محاولة تنفيذ الصفقات الأخرى
+
+        trade_info = rm.get_trade_info(
+            levels["entry"],
+            levels["stop_loss"],
+            levels["take_profit"]
         )
 
-        if result:
-            order_type = result.get("order_type", "MARKET")
-            order_icon = "🔄" if order_type == "MARKET" else "⏳"
+        if not trade_info["trade_valid"]:
             notifier.send(
-                f"✅ تم تنفيذ الصفقة!\n"
-                f"{order_icon} النوع: {order_type}\n"
-                f"Ticket: #{result['ticket']}\n"
-                f"السعر: {result['price']}"
+                f"⚠️ نسبة الربح/الخسارة ضعيفة لـ {pair_name} ({trade_info['rr_ratio']}) "
+                f"— الحد الأدنى: {MIN_RR_RATIO}"
+            )
+            continue
+
+        # ═══════════════════════════════════════════════════════════
+        # 7. تنفيذ الصفقة على MT5
+        # ═══════════════════════════════════════════════════════════
+
+        lots = trade_info["lots"]
+
+        # TP متعدد
+        tp_info = ""
+        tp_levels = trade_info.get("tp_levels")
+        if tp_levels:
+            tp_info = (
+                f"\n🎯 TP1: {tp_levels['tp1']} ({tp_levels['tp1_rr']}R) — أغلق {int(tp_levels['tp1_close_ratio']*100)}%"
+                f"\n🎯 TP2: {tp_levels['tp2']} ({tp_levels['tp2_rr']}R) — الباقي"
+                f"\n🔒 Break-Even عند 1R"
+                f"\n📈 Trailing Stop بعد 1.5R"
             )
 
-            # تسجيل الصفقة في اليوميات
-            try:
-                journal = TradeJournal()
-                journal.log_trade_open(
-                    ticket=result['ticket'],
-                    direction=final_action,
-                    entry=result['price'],
-                    sl=levels['stop_loss'],
-                    tp=levels['take_profit'],
-                    lots=lots,
-                    confluence_score=signal['confluence_score'],
-                    entry_type=levels['entry_type'],
-                    reasons=signal.get('details', []),
-                    session=signal.get('session', ''),
-                    bias=signal.get('bias', ''),
+        notifier.send(
+            f"🚀 تنفيذ صفقة ICT على MT5:\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"🌍 الزوج: {pair_name}\n"
+            f"📍 الاتجاه: {final_action}\n"
+            f"💰 الدخول: {levels['entry']}\n"
+            f"🛑 وقف الخسارة: {levels['stop_loss']}\n"
+            f"🎯 هدف الربح: {levels['take_profit']}\n"
+            f"📐 RR: 1:{levels['rr_ratio']}\n"
+            f"📦 الحجم: {lots} lots\n"
+            f"💵 المخاطرة: ${trade_info['risk_amount']}\n"
+            f"🔑 نوع الدخول: {levels['entry_type']}\n"
+            f"📊 الالتقاء: {best['score']}/140"
+            f"{tp_info}"
+        )
+
+        try:
+            result = executor.place_order(
+                signal=final_action,
+                lots=lots,
+                stop_loss=levels["stop_loss"],
+                take_profit=levels["take_profit"],
+                entry_price=levels["entry"],
+                symbol=pair_config["mt5"],
+            )
+
+            if result:
+                order_type = result.get("order_type", "MARKET")
+                order_icon = "🔄" if order_type == "MARKET" else "⏳"
+                notifier.send(
+                    f"✅ تم تنفيذ الصفقة لـ {pair_name}!\n"
+                    f"{order_icon} النوع: {order_type}\n"
+                    f"Ticket: #{result['ticket']}\n"
+                    f"السعر: {result['price']}"
                 )
-            except Exception as je:
-                print(f"⚠️ فشل تسجيل الصفقة: {je}")
-        else:
-            sym = executor.get_symbol_info()
-            current = f"Bid:{sym['bid']} Ask:{sym['ask']}" if sym else "?"
-            notifier.send(
-                f"❌ فشل تنفيذ الصفقة على MT5\n"
-                f"📍 السعر الحالي: {current}\n"
-                f"📦 اللوت: {lots}\n"
-                f"تحقق من: AutoTrading مفعّل + الرصيد كافي"
-            )
-    except Exception as e:
-        notifier.send(f"❌ خطأ في التنفيذ: {e}")
+
+                # تسجيل الصفقة في اليوميات
+                try:
+                    journal = TradeJournal()
+                    journal.log_trade_open(
+                        ticket=result['ticket'],
+                        direction=final_action,
+                        entry=result['price'],
+                        sl=levels['stop_loss'],
+                        tp=levels['take_profit'],
+                        lots=lots,
+                        confluence_score=signal['confluence_score'],
+                        entry_type=levels['entry_type'],
+                        reasons=signal.get('details', []),
+                        session=signal.get('session', ''),
+                        bias=signal.get('bias', ''),
+                    )
+                except Exception as je:
+                    print(f"⚠️ فشل تسجيل الصفقة: {je}")
+            else:
+                sym = executor.get_symbol_info()
+                current = f"Bid:{sym['bid']} Ask:{sym['ask']}" if sym else "?"
+                notifier.send(
+                    f"❌ فشل تنفيذ الصفقة على MT5 لـ {pair_name}\n"
+                    f"📍 السعر الحالي: {current}\n"
+                    f"📦 اللوت: {lots}\n"
+                    f"تحقق من: AutoTrading مفعّل + الرصيد كافي"
+                )
+        except Exception as e:
+            notifier.send(f"❌ خطأ في التنفيذ لـ {pair_name}: {e}")
 
     executor.disconnect()
 

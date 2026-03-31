@@ -68,51 +68,72 @@ class MultiPairScanner:
 
         return self.results
 
-    def get_best_opportunity(self, open_pairs=None):
+    def get_best_opportunities(self, open_pairs=None):
         """
-        اختيار أفضل فرصة مع فلتر الارتباط
-
-        open_pairs: أزواج مفتوحة حالياً (لمنع الارتباط)
+        اختيار أفضل الفرص مع فلتر الارتباط وتطبيق شروط جديدة:
+        1. إذا السكور > 85: يدخل بكل الصفقات المتاحة (شرط عدم الارتباط).
+        2. إذا السكور بين 70 و 85: يدخل بأفضل صفقتين فقط (شرط عدم الارتباط).
+        
+        يرجع: قائمة بالصفقات المختارة
         """
         if not self.results:
             self.scan_all()
 
         open_pairs = set(open_pairs or [])
-
-        # فلتر: فقط الإشارات الفعّالة  
+        
+        # فلتر: فقط الإشارات الفعّالة
         candidates = []
         for pair_name, data in self.results.items():
             signal = data["signal"]
             if signal["action"] in ("BUY", "SELL"):
-                candidates.append({
-                    "pair": pair_name,
-                    "action": signal["action"],
-                    "score": signal["confluence_score"],
-                    "levels": data["levels"],
-                    "config": data["config"],
-                })
+                # تأكد أن السكور 70 فما فوق
+                if signal["confluence_score"] >= 70:
+                    candidates.append({
+                        "pair": pair_name,
+                        "action": signal["action"],
+                        "score": signal["confluence_score"],
+                        "levels": data["levels"],
+                        "config": data["config"],
+                        "report": data.get("report", ""),
+                    })
 
         if not candidates:
-            return None
+            return []
 
-        # ترتيب حسب الالتقاء
+        # ترتيب حسب الالتقاء (من الأقوى للأضعف)
         candidates.sort(key=lambda c: c["score"], reverse=True)
 
-        # فلتر الارتباط
+        accepted = []
+        mid_tier_count = 0  # الصفقات المقبولة بين 70 و 85
+
         for candidate in candidates:
             pair = candidate["pair"]
+            score = candidate["score"]
 
-            # تحقق إذا مرتبط بزوج مفتوح
+            # 1. هل وصلنا للحد الأقصى في شريحة 70-85؟
+            if 70 <= score <= 85 and mid_tier_count >= 2:
+                continue
+
+            # 2. فلتر الارتباط (مع الصفقات المفتوحة مسبقاً + الصفقات التي تم قبولها الآن)
+            currently_active = open_pairs.union({c["pair"] for c in accepted})
             is_correlated = False
             for group in CORRELATED_GROUPS:
-                if pair in group and group & open_pairs:
+                # إذا كان الزوج ضمن هذه المجموعة، وهناك زوج آخر من نفس المجموعة مفتوح
+                if pair in group and group & currently_active:
                     is_correlated = True
                     break
 
             if not is_correlated:
-                return candidate
+                accepted.append(candidate)
+                if 70 <= score <= 85:
+                    mid_tier_count += 1
 
-        return None
+        return accepted
+
+    def get_best_opportunity(self, open_pairs=None):
+        """للتوافق مع الاستدعاءات القديمة إذا لزم الأمر"""
+        opportunities = self.get_best_opportunities(open_pairs)
+        return opportunities[0] if opportunities else None
 
     def get_report(self):
         """تقرير شامل لكل الأزواج"""

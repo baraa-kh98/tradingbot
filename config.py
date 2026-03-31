@@ -128,7 +128,7 @@ OTE_FIB_HIGH = 0.79
 BALANCE = 10000
 RISK_PERCENT = 1.0
 MIN_RR_RATIO = 2.0
-MIN_CONFLUENCE_SCORE = 60
+MIN_CONFLUENCE_SCORE = 70
 
 # ═══════════════════════════════════════════════════════════════
 # Macro Filter (اختياري)
@@ -148,7 +148,7 @@ KILL_ZONES = {
     "new_york_pm": {"start": "13:30", "end": "16:00"},
 }
 
-KILL_ZONE_FILTER = True
+KILL_ZONE_FILTER = False
 
 # ═══════════════════════════════════════════════════════════════
 # MT5 Settings
