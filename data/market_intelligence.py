@@ -40,20 +40,23 @@ class FinnHubNews:
     BULLISH_USD = [
         "rate hike", "hawkish", "strong dollar", "hot inflation",
         "beat expectations", "above forecast", "strong jobs",
-        "higher rates", "tightening",
+        "higher rates", "tightening", "growth", "optimism",
+        "resilient", "expansion", "safe haven"
     ]
 
     BEARISH_USD = [
         "rate cut", "dovish", "weak dollar", "cool inflation",
         "miss expectations", "below forecast", "weak jobs",
-        "lower rates", "easing", "recession fears",
+        "lower rates", "easing", "recession", "contraction",
+        "crisis", "tension", "conflict", "war", "crash",
+        "plunge", "slowdown", "default", "fear"
     ]
 
     def __init__(self, api_key=None):
         self.api_key = api_key or FINNHUB_API_KEY
 
-    def get_forex_news(self, category="forex", count=20):
-        """جلب أخبار الفوركس"""
+    def get_forex_news(self, category="general", count=50):
+        """جلب الأخبار (general لأنه للنسخة المجانية يعطي نتائج أكثر من forex)"""
         if not self.api_key:
             return []
         try:
@@ -63,7 +66,12 @@ class FinnHubNews:
                 timeout=10,
             )
             if resp.status_code == 200:
-                news = resp.json()[:count]
+                data = resp.json()
+                if isinstance(data, dict) and "error" in data:
+                    print(f"⚠️ خطأ API أخبار: {data['error']}")
+                    return []
+                
+                news = data[:count]
                 return [
                     {
                         "headline": n.get("headline", ""),
@@ -104,19 +112,20 @@ class FinnHubNews:
         + = bullish USD (bearish USDJPY لأن الين أضعف)
         - = bearish USD
         """
-        news = self.get_forex_news(count=30)
+        news = self.get_forex_news(count=50)
         if not news:
-            return 0, "لا أخبار", []
+            return 0, "لا أخبار متاحة", []
 
         bull = sum(1 for n in news if n["sentiment"] == "BULLISH_USD")
         bear = sum(1 for n in news if n["sentiment"] == "BEARISH_USD")
         high_impact = [n for n in news if n["impact"] == "HIGH"]
 
-        total = len(news)
-        if total == 0:
+        # التركيز فقط على الأخبار التي لها توجه (BULLISH أو BEARISH)
+        total_directional = bull + bear
+        if total_directional == 0:
             return 0, "NEUTRAL", high_impact
 
-        score = int((bull - bear) / total * 100)
+        score = int((bull - bear) / total_directional * 100)
         bias = "BULLISH_USD" if score > 15 else ("BEARISH_USD" if score < -15 else "NEUTRAL")
 
         return score, bias, high_impact
@@ -148,6 +157,10 @@ class EconomicCalendar:
             )
             if resp.status_code == 200:
                 data = resp.json()
+                if isinstance(data, dict) and "error" in data:
+                    print(f"⚠️ تنبيه التقويم (نسخة مجانية مقيدة): {data['error']}")
+                    return []
+                
                 events = data.get("economicCalendar", [])
                 return [
                     {
