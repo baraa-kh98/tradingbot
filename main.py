@@ -14,6 +14,7 @@ from data.macro_analyzer import MacroAnalyzer
 from strategy.signal_generator import ICTSignalGenerator
 from strategy.kill_zones import get_current_session
 from risk.risk_manager import RiskManager
+from risk.trade_monitor import TradeMonitor
 from execution.executor import Executor
 from notifier import Notifier
 from config import (
@@ -141,13 +142,22 @@ def run_bot():
                 return
 
     # ═══════════════════════════════════════════════════════════
-    # 6. إدارة المخاطر
+    # 6. إدارة المخاطر المتقدمة
     # ═══════════════════════════════════════════════════════════
 
     # استخدام رصيد الحساب الحقيقي إذا متصل
     balance = account["balance"] if account else BALANCE
 
     rm = RiskManager(balance=balance, risk_percent=RISK_PERCENT)
+
+    # فحص الحدود اليومية
+    open_positions = executor.get_open_positions()
+    can_trade, trade_reason = rm.can_trade(len(open_positions))
+    if not can_trade:
+        notifier.send(f"{trade_reason}")
+        executor.disconnect()
+        return
+
     trade_info = rm.get_trade_info(
         levels["entry"],
         levels["stop_loss"],
@@ -166,11 +176,18 @@ def run_bot():
     # 7. تنفيذ الصفقة على MT5
     # ═══════════════════════════════════════════════════════════
 
-    # تحويل حجم الصفقة لـ lots
-    # position_size من risk_manager = وحدات العملة
-    # MT5 يحتاج lots (1 lot = 100,000 وحدة)
-    lots = round(trade_info["position_size"] / 100000, 2)
-    lots = max(lots, 0.01)  # minimum lot
+    lots = trade_info["lots"]
+
+    # TP متعدد
+    tp_info = ""
+    tp_levels = trade_info.get("tp_levels")
+    if tp_levels:
+        tp_info = (
+            f"\n🎯 TP1: {tp_levels['tp1']} ({tp_levels['tp1_rr']}R) — أغلق {int(tp_levels['tp1_close_ratio']*100)}%"
+            f"\n🎯 TP2: {tp_levels['tp2']} ({tp_levels['tp2_rr']}R) — الباقي"
+            f"\n🔒 Break-Even عند 1R"
+            f"\n📈 Trailing Stop بعد 1.5R"
+        )
 
     notifier.send(
         f"🚀 تنفيذ صفقة ICT على MT5:\n"
@@ -184,6 +201,7 @@ def run_bot():
         f"💵 المخاطرة: ${trade_info['risk_amount']}\n"
         f"🔑 نوع الدخول: {levels['entry_type']}\n"
         f"📊 الالتقاء: {signal['confluence_score']}/100"
+        f"{tp_info}"
     )
 
     try:
@@ -246,24 +264,52 @@ if __name__ == "__main__":
         f"🤖 البوت بدأ التشغيل المستمر!\n"
         f"⏱️ فحص كل {SCAN_INTERVAL_MINUTES} دقيقة\n"
         f"📊 الزوج: USDJPY\n"
+        f"🛡️ إدارة مخاطر: Partial TP + Trailing SL\n"
         f"💡 لإيقاف البوت: Ctrl+C"
     )
 
+    # إعداد مراقب الصفقات
+    feed = DataFeed()
+    executor = Executor()
+    rm = RiskManager(balance=BALANCE, risk_percent=RISK_PERCENT)
+    monitor = TradeMonitor(executor, rm, feed, notifier)
+
     cycle = 0
+    last_day = None
+
     while True:
         cycle += 1
 
         try:
+            # إعادة تعيين الحدود اليومية عند بداية يوم جديد
+            from datetime import datetime
+            today = datetime.now().date()
+            if last_day != today:
+                rm.reset_daily()
+                last_day = today
+                if cycle > 1:
+                    notifier.send(f"📅 يوم جديد — إعادة تعيين الحدود اليومية")
+
             if not is_market_open():
                 print(f"\n⏸️ [{time.strftime('%H:%M')}] السوق مغلق (عطلة نهاية الأسبوع)")
                 print(f"   ⏰ الفحص التالي بعد 60 دقيقة...")
-                time.sleep(60 * 60)  # انتظر ساعة وتحقق مرة ثانية
+                time.sleep(60 * 60)
                 continue
 
             print(f"\n{'═' * 50}")
             print(f"   🔄 الدورة #{cycle} — {time.strftime('%Y-%m-%d %H:%M:%S')}")
             print(f"{'═' * 50}")
 
+            # مراقبة الصفقات المفتوحة (كل دورة)
+            if executor.connected or executor.connect():
+                mods = monitor.check_and_manage()
+                if mods > 0:
+                    print(f"   📊 تم تعديل {mods} صفقة")
+
+                status = monitor.get_status()
+                print(f"   {status}")
+
+            # تحليل فرص جديدة
             run_bot()
 
             print(f"\n⏰ الفحص التالي بعد {SCAN_INTERVAL_MINUTES} دقيقة...")
@@ -272,9 +318,11 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print("\n\n🛑 تم إيقاف البوت يدوياً")
             notifier.send("🛑 تم إيقاف البوت يدوياً")
+            if executor.connected:
+                executor.disconnect()
             break
 
         except Exception as e:
             print(f"\n❌ خطأ غير متوقع: {e}")
             notifier.send(f"❌ خطأ غير متوقع: {e}\n🔄 إعادة المحاولة بعد دقيقة...")
-            time.sleep(60)  # انتظر دقيقة وحاول مرة ثانية
+            time.sleep(60)
