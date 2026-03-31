@@ -37,12 +37,47 @@ FRED_API_KEY = os.getenv("FRED_API_KEY", "")
 
 
 # ═══════════════════════════════════════════════════════════════
-# Trading Pair
+# Trading Pairs — أزواج متعددة
 # ═══════════════════════════════════════════════════════════════
 
-SYMBOL_MT5 = "USDJPY.BL"        # رمز الزوج على MT5
+SYMBOL_MT5 = "USDJPY.BL"        # رمز الزوج على MT5 (الافتراضي)
 SYMBOL_TD = "USD/JPY"           # رمز الزوج على Twelve Data
 PIP_VALUE = 0.01                # قيمة النقطة لـ JPY pairs
+
+# أزواج التداول المدعومة
+TRADING_PAIRS = {
+    "USDJPY": {
+        "mt5": "USDJPY.BL",
+        "td": "USD/JPY",
+        "pip": 0.01,
+        "spread_pips": 1.5,
+        "enabled": True,
+    },
+    "EURUSD": {
+        "mt5": "EURUSD.BL",
+        "td": "EUR/USD",
+        "pip": 0.0001,
+        "spread_pips": 1.2,
+        "enabled": False,
+    },
+    "GBPUSD": {
+        "mt5": "GBPUSD.BL",
+        "td": "GBP/USD",
+        "pip": 0.0001,
+        "spread_pips": 1.8,
+        "enabled": False,
+    },
+    "XAUUSD": {
+        "mt5": "XAUUSD.BL",
+        "td": "XAU/USD",
+        "pip": 0.01,
+        "spread_pips": 3.0,
+        "enabled": False,
+    },
+}
+
+# الأزواج المفعّلة
+ACTIVE_PAIRS = [k for k, v in TRADING_PAIRS.items() if v["enabled"]]
 
 # ═══════════════════════════════════════════════════════════════
 # Timeframes (Multi-Timeframe Analysis)

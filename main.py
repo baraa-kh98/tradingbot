@@ -19,6 +19,7 @@ from risk.trade_journal import TradeJournal
 from strategy.self_optimizer import SelfOptimizer
 from execution.executor import Executor
 from notifier import Notifier
+from telegram_dashboard import TelegramDashboard
 from config import (
     CLAUDE_API_KEY,
     TELEGRAM_TOKEN,
@@ -279,13 +280,65 @@ if __name__ == "__main__":
         run_bot()
         sys.exit(0)
 
-    # الوضع المستمر 24/7
-    notifier = Notifier(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
-    notifier.send(
+    # حالة البوت المشتركة
+    bot_state = {
+        "paused": False,
+        "cycle": 0,
+        "last_scan": "",
+        "open_trades": 0,
+        "active_pairs": ["USDJPY"],
+    }
+
+    # Telegram Dashboard
+    dashboard = TelegramDashboard(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, bot_state)
+
+    # تسجيل أوامر إضافية
+    def cmd_report(args=None):
+        try:
+            return journal.get_telegram_report()
+        except Exception as e:
+            return f"❌ {e}"
+
+    def cmd_analyze(args=None):
+        try:
+            f = DataFeed()
+            htf = f.get_htf_data()
+            ltf = f.get_ltf_data()
+            if htf is not None:
+                gen = ICTSignalGenerator(htf, ltf)
+                return gen.get_full_report()
+            return "❌ فشل جلب البيانات"
+        except Exception as e:
+            return f"❌ {e}"
+
+    def cmd_lessons(args=None):
+        try:
+            return journal.get_lessons_summary() + "\n\n" + journal.get_recommendations()
+        except Exception as e:
+            return f"❌ {e}"
+
+    def cmd_pairs(args=None):
+        from config import TRADING_PAIRS
+        lines = ["═══ 🌍 الأزواج ═══"]
+        for name, cfg in TRADING_PAIRS.items():
+            icon = "✅" if cfg["enabled"] else "❌"
+            lines.append(f"{icon} {name} — spread: {cfg['spread_pips']}p")
+        lines.append("\nلتفعيل/تعطيل: عدّل config.py")
+        return "\n".join(lines)
+
+    dashboard.register_handler("report", cmd_report)
+    dashboard.register_handler("analyze", cmd_analyze)
+    dashboard.register_handler("lessons", cmd_lessons)
+    dashboard.register_handler("pairs", cmd_pairs)
+
+    dashboard.start_polling()
+
+    dashboard.send(
         f"🤖 البوت بدأ التشغيل المستمر!\n"
         f"⏱️ فحص كل {SCAN_INTERVAL_MINUTES} دقيقة\n"
         f"📊 الزوج: USDJPY\n"
         f"🛡️ إدارة مخاطر: Partial TP + Trailing SL\n"
+        f"📲 لوحة التحكم: /help\n"
         f"💡 لإيقاف البوت: Ctrl+C"
     )
 
@@ -293,9 +346,10 @@ if __name__ == "__main__":
     feed = DataFeed()
     executor = Executor()
     rm = RiskManager(balance=BALANCE, risk_percent=RISK_PERCENT)
-    monitor = TradeMonitor(executor, rm, feed, notifier)
+    monitor = TradeMonitor(executor, rm, feed, dashboard)
     journal = TradeJournal()
-    optimizer = SelfOptimizer(journal)
+    optimizer_self = SelfOptimizer(journal)
+    notifier = dashboard  # للتوافق مع الكود القديم
 
     cycle = 0
     last_day = None
@@ -323,8 +377,8 @@ if __name__ == "__main__":
                     if today.weekday() == 6 and last_report_day != today:
                         last_report_day = today
                         try:
-                            opt_report = optimizer.get_report()
-                            notifier.send(opt_report)
+                            opt_report = optimizer_self.get_report()
+                            dashboard.send(opt_report)
                         except Exception:
                             pass
 
@@ -347,6 +401,16 @@ if __name__ == "__main__":
                 status = monitor.get_status()
                 print(f"   {status}")
 
+            # تحقق من الإيقاف المؤقت
+            if bot_state.get("paused"):
+                print(f"   ⏸️ البوت متوقف مؤقتاً (اكتب /resume)")
+                time.sleep(30)
+                continue
+
+            # تحديث حالة البوت
+            bot_state["cycle"] = cycle
+            bot_state["last_scan"] = time.strftime("%H:%M:%S")
+
             # تحليل فرص جديدة
             run_bot()
 
@@ -355,7 +419,8 @@ if __name__ == "__main__":
 
         except KeyboardInterrupt:
             print("\n\n🛑 تم إيقاف البوت يدوياً")
-            notifier.send("🛑 تم إيقاف البوت يدوياً")
+            dashboard.send("🛑 تم إيقاف البوت يدوياً")
+            dashboard.stop_polling()
             if executor.connected:
                 executor.disconnect()
             break
