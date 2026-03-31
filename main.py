@@ -15,6 +15,8 @@ from strategy.signal_generator import ICTSignalGenerator
 from strategy.kill_zones import get_current_session
 from risk.risk_manager import RiskManager
 from risk.trade_monitor import TradeMonitor
+from risk.trade_journal import TradeJournal
+from strategy.self_optimizer import SelfOptimizer
 from execution.executor import Executor
 from notifier import Notifier
 from config import (
@@ -218,6 +220,25 @@ def run_bot():
                 f"Ticket: #{result['ticket']}\n"
                 f"السعر: {result['price']}"
             )
+
+            # تسجيل الصفقة في اليوميات
+            try:
+                journal = TradeJournal()
+                journal.log_trade_open(
+                    ticket=result['ticket'],
+                    direction=final_action,
+                    entry=result['price'],
+                    sl=levels['stop_loss'],
+                    tp=levels['take_profit'],
+                    lots=lots,
+                    confluence_score=signal['confluence_score'],
+                    entry_type=levels['entry_type'],
+                    reasons=signal.get('details', []),
+                    session=signal.get('session', ''),
+                    bias=signal.get('bias', ''),
+                )
+            except Exception as je:
+                print(f"⚠️ فشل تسجيل الصفقة: {je}")
         else:
             notifier.send("❌ فشل تنفيذ الصفقة على MT5")
     except Exception as e:
@@ -273,9 +294,12 @@ if __name__ == "__main__":
     executor = Executor()
     rm = RiskManager(balance=BALANCE, risk_percent=RISK_PERCENT)
     monitor = TradeMonitor(executor, rm, feed, notifier)
+    journal = TradeJournal()
+    optimizer = SelfOptimizer(journal)
 
     cycle = 0
     last_day = None
+    last_report_day = None
 
     while True:
         cycle += 1
@@ -288,7 +312,21 @@ if __name__ == "__main__":
                 rm.reset_daily()
                 last_day = today
                 if cycle > 1:
-                    notifier.send(f"📅 يوم جديد — إعادة تعيين الحدود اليومية")
+                    # تقرير يومي
+                    try:
+                        report = journal.get_telegram_report()
+                        notifier.send(f"📅 يوم جديد\n{report}")
+                    except Exception:
+                        notifier.send("📅 يوم جديد — إعادة تعيين الحدود اليومية")
+
+                    # تقرير أسبوعي (كل أحد)
+                    if today.weekday() == 6 and last_report_day != today:
+                        last_report_day = today
+                        try:
+                            opt_report = optimizer.get_report()
+                            notifier.send(opt_report)
+                        except Exception:
+                            pass
 
             if not is_market_open():
                 print(f"\n⏸️ [{time.strftime('%H:%M')}] السوق مغلق (عطلة نهاية الأسبوع)")
