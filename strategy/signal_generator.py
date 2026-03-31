@@ -6,6 +6,7 @@ ICT Signal Generator — مولّد إشارات ICT
 """
 
 from strategy.ict_core import run_full_ict_analysis
+from strategy.ict_advanced import run_advanced_ict_analysis
 from strategy.kill_zones import is_kill_zone, get_current_session
 from config import (
     SWING_LOOKBACK,
@@ -25,11 +26,15 @@ class ICTSignalGenerator:
     - Market Structure (BOS/CHoCH): 25 نقطة
     - Order Block: 20 نقطة
     - Fair Value Gap: 15 نقطة
+    - Breaker Block: 15 نقطة          ← جديد
     - Premium/Discount Zone: 15 نقطة
     - Liquidity Sweep: 15 نقطة
+    - Silver Bullet: 10 نقاط           ← جديد
+    - AMD Confirmation: 10 نقاط       ← جديد
     - Kill Zone: 10 نقطة
+    - Inducement: 5 نقاط              ← جديد
     ──────────────────────
-    المجموع: 100 نقطة
+    المجموع: 140 نقطة
 
     الحد الأدنى للدخول: MIN_CONFLUENCE_SCORE (60 نقطة)
     """
@@ -48,6 +53,9 @@ class ICTSignalGenerator:
 
         # تحليل LTF للدخول
         self.ltf_analysis = run_full_ict_analysis(self.ltf_data, SWING_LOOKBACK)
+
+        # تحليل متقدم
+        self.advanced = run_advanced_ict_analysis(self.ltf_data, self.ltf_analysis)
 
         # حالة الجلسة
         self.session = get_current_session()
@@ -215,6 +223,76 @@ class ICTSignalGenerator:
             score += 10
             kz_names = {"london": "لندن", "new_york": "نيويورك", "asian": "آسيا"}
             reasons.append(f"⏰ ضمن Kill Zone — {kz_names.get(self.kz_name, self.kz_name)}")
+
+        # ──────────────────────────────────────────────
+        # 7. Breaker Blocks (15 نقطة) — جديد
+        # ──────────────────────────────────────────────
+        breakers = self.advanced.get("breaker_blocks", {})
+        self._active_breaker = None
+
+        if direction == "BUY" and breakers.get("bullish"):
+            for bb in reversed(breakers["bullish"]):
+                if bb["bottom"] <= current_price <= bb["top"] * 1.002:
+                    score += 15
+                    reasons.append(f"🔄 السعر عند Bullish Breaker ({bb['bottom']:.3f}-{bb['top']:.3f})")
+                    self._active_breaker = bb
+                    break
+        elif direction == "SELL" and breakers.get("bearish"):
+            for bb in reversed(breakers["bearish"]):
+                if bb["bottom"] * 0.998 <= current_price <= bb["top"]:
+                    score += 15
+                    reasons.append(f"🔄 السعر عند Bearish Breaker ({bb['bottom']:.3f}-{bb['top']:.3f})")
+                    self._active_breaker = bb
+                    break
+
+        # ──────────────────────────────────────────────
+        # 8. Silver Bullet (10 نقاط) — جديد
+        # ──────────────────────────────────────────────
+        sb = self.advanced.get("silver_bullet", {})
+        if sb.get("active"):
+            window_names = {
+                "LONDON_SB": "لندن 🇬🇧",
+                "NY_AM_SB": "نيويورك صباحاً 🇺🇸",
+                "NY_PM_SB": "نيويورك مساءً 🇺🇸",
+            }
+            # إذا في FVG بنفس اتجاه الصفقة ضمن النافذة
+            for fvg in sb.get("fvgs_in_window", []):
+                if direction == "BUY" and fvg["direction"] == "BULLISH":
+                    score += 10
+                    reasons.append(f"🔫 Silver Bullet — {window_names.get(sb['window'], sb['window'])}")
+                    break
+                elif direction == "SELL" and fvg["direction"] == "BEARISH":
+                    score += 10
+                    reasons.append(f"🔫 Silver Bullet — {window_names.get(sb['window'], sb['window'])}")
+                    break
+
+        # ──────────────────────────────────────────────
+        # 9. AMD Confirmation (10 نقاط) — جديد
+        # ──────────────────────────────────────────────
+        amd = self.advanced.get("amd", {})
+        if amd.get("detected") and amd.get("bias"):
+            if amd["bias"] == direction:
+                score += 10
+                reasons.append(f"📊 AMD يؤكد: {amd['phase']} → {amd['bias']}")
+                if amd.get("distribution_move"):
+                    reasons.append(f"   حركة التوزيع: {amd['distribution_move']} pips")
+            elif amd["bias"] != "NEUTRAL":
+                score -= 5
+                reasons.append(f"⚠️ AMD يعارض: {amd['phase']} → {amd['bias']}")
+
+        # ──────────────────────────────────────────────
+        # 10. Inducement (5 نقاط) — جديد
+        # ──────────────────────────────────────────────
+        inducements = self.advanced.get("inducements", [])
+        for ind in inducements:
+            if direction == "BUY" and ind["type"] == "BULLISH_INDUCEMENT":
+                score += 5
+                reasons.append(f"🪤 Inducement bullish عند {ind['level']:.3f}")
+                break
+            elif direction == "SELL" and ind["type"] == "BEARISH_INDUCEMENT":
+                score += 5
+                reasons.append(f"🪤 Inducement bearish عند {ind['level']:.3f}")
+                break
 
         return score, reasons
 
@@ -402,12 +480,33 @@ class ICTSignalGenerator:
         if self.session["is_kill_zone"]:
             report_lines.append(f"🎯 Kill Zone: {self.session['kill_zone_name']}")
 
-        report_lines.append(f"\n📊 الالتقاء: {signal['confluence_score']}/100")
+        report_lines.append(f"\n📊 الالتقاء: {signal['confluence_score']}/140")
 
         if signal["details"]:
             report_lines.append("\n── التفاصيل ──")
             for detail in signal["details"]:
                 report_lines.append(detail)
+
+        # تفاصيل متقدمة
+        sb = self.advanced.get("silver_bullet", {})
+        amd = self.advanced.get("amd", {})
+        breakers = self.advanced.get("breaker_blocks", {})
+        inducements = self.advanced.get("inducements", [])
+
+        advanced_lines = []
+        if sb.get("active"):
+            advanced_lines.append(f"🔫 Silver Bullet: {sb['window']}")
+        if amd.get("detected"):
+            advanced_lines.append(f"📊 AMD: {amd['phase']} → {amd.get('bias', '?')}")
+        bb_count = len(breakers.get('bullish', [])) + len(breakers.get('bearish', []))
+        if bb_count > 0:
+            advanced_lines.append(f"🔄 Breaker Blocks: {bb_count}")
+        if inducements:
+            advanced_lines.append(f"🪤 Inducements: {len(inducements)}")
+
+        if advanced_lines:
+            report_lines.append("\n── ICT متقدم ──")
+            report_lines.extend(advanced_lines)
 
         report_lines.append(f"\n🎬 الإشارة: {signal['action']}")
 
