@@ -30,6 +30,7 @@ from config import (
     MIN_RR_RATIO,
     USE_MACRO_FILTER,
     MACRO_MIN_SCORE,
+    ACTIVE_PAIRS,
 )
 
 
