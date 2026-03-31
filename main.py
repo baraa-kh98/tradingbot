@@ -213,11 +213,15 @@ def run_bot():
             lots=lots,
             stop_loss=levels["stop_loss"],
             take_profit=levels["take_profit"],
+            entry_price=levels["entry"],
         )
 
         if result:
+            order_type = result.get("order_type", "MARKET")
+            order_icon = "🔄" if order_type == "MARKET" else "⏳"
             notifier.send(
                 f"✅ تم تنفيذ الصفقة!\n"
+                f"{order_icon} النوع: {order_type}\n"
                 f"Ticket: #{result['ticket']}\n"
                 f"السعر: {result['price']}"
             )

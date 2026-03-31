@@ -170,14 +170,15 @@ class Executor:
             "digits": info.digits,
         }
 
-    def place_order(self, signal, lots, stop_loss, take_profit, symbol=None):
+    def place_order(self, signal, lots, stop_loss, take_profit, entry_price=None, symbol=None):
         """
-        فتح صفقة جديدة
+        فتح صفقة جديدة — Market أو Pending Limit تلقائياً
 
         signal: "BUY" أو "SELL"
-        lots: حجم اللوت (مثل 0.01)
+        lots: حجم اللوت
         stop_loss: سعر وقف الخسارة
         take_profit: سعر جني الأرباح
+        entry_price: سعر الدخول المطلوب (إذا None = market order)
         """
         if not self._ensure_connected():
             return None
@@ -187,62 +188,82 @@ class Executor:
         if sym_info is None:
             return None
 
-        # تحديد نوع الأمر والسعر
+        # السعر الحالي
         if signal == "BUY":
-            order_type = self.mt5.ORDER_TYPE_BUY
-            price = sym_info["ask"]
+            market_price = sym_info["ask"]
         elif signal == "SELL":
-            order_type = self.mt5.ORDER_TYPE_SELL
-            price = sym_info["bid"]
+            market_price = sym_info["bid"]
         else:
             print(f"❌ إشارة غير صالحة: {signal}")
             return None
 
-        # ═══ تحقق من السعر والمستويات ═══
-        print(f"   📍 السعر الحالي: {price} | SL: {stop_loss} | TP: {take_profit}")
-
-        if signal == "BUY":
-            # للشراء: SL تحت السعر + TP فوق السعر
-            if stop_loss >= price:
-                print(f"⚠️ SL ({stop_loss}) >= سعر الشراء ({price}) — مستويات غلط!")
-                return None
-            if take_profit <= price:
-                print(f"⚠️ TP ({take_profit}) <= سعر الشراء ({price}) — الفرصة فاتت!")
-                return None
-        else:  # SELL
-            # للبيع: SL فوق السعر + TP تحت السعر
-            if stop_loss <= price:
-                print(f"⚠️ SL ({stop_loss}) <= سعر البيع ({price}) — مستويات غلط!")
-                return None
-            if take_profit >= price:
-                print(f"⚠️ TP ({take_profit}) >= سعر البيع ({price}) — الفرصة فاتت!")
-                return None
-
-        # التأكد من مسافة SL كافية (حد أدنى من الوسيط)
-        min_stop_distance = sym_info.get("point", 0.001) * 10  # عادةً 10 نقاط
-        if abs(price - stop_loss) < min_stop_distance:
-            print(f"⚠️ SL قريب جداً ({abs(price - stop_loss):.3f}) — الحد الأدنى: {min_stop_distance}")
-            return None
+        digits = sym_info["digits"]
+        point = sym_info["point"]
+        pip = point * 10  # عادةً 10 نقاط = 1 pip
 
         # التأكد من حجم اللوت
         lots = max(lots, sym_info["lot_min"])
+        lots = min(lots, sym_info.get("lot_max", 100))
         lots = round(lots / sym_info["lot_step"]) * sym_info["lot_step"]
         lots = round(lots, 2)
 
-        # تقريب SL و TP
-        digits = sym_info["digits"]
+        # تقريب المستويات
         stop_loss = round(stop_loss, digits)
         take_profit = round(take_profit, digits)
 
-        # بناء الطلب
+        # ═══ تحديد نوع الأمر: Market أو Pending ═══
+        threshold = pip * 5  # 5 pips تحمّل
+
+        if entry_price is not None:
+            entry_price = round(entry_price, digits)
+            distance = abs(market_price - entry_price)
+        else:
+            entry_price = market_price
+            distance = 0
+
+        if distance <= threshold:
+            # ═══ MARKET ORDER — السعر عند الدخول ═══
+            return self._execute_market_order(
+                signal, symbol, lots, market_price,
+                stop_loss, take_profit, sym_info
+            )
+        else:
+            # ═══ PENDING LIMIT — السعر لسا ما وصل ═══
+            return self._execute_limit_order(
+                signal, symbol, lots, entry_price,
+                stop_loss, take_profit, sym_info
+            )
+
+    def _execute_market_order(self, signal, symbol, lots, price, sl, tp, sym_info):
+        """تنفيذ Market Order فوري"""
+        # تحقق من المستويات
+        if signal == "BUY":
+            if sl >= price:
+                print(f"⚠️ SL ({sl}) >= سعر الشراء ({price}) — مستويات غلط!")
+                return None
+            if tp <= price:
+                print(f"⚠️ TP ({tp}) <= سعر الشراء ({price}) — الفرصة فاتت!")
+                return None
+            order_type = self.mt5.ORDER_TYPE_BUY
+        else:
+            if sl <= price:
+                print(f"⚠️ SL ({sl}) <= سعر البيع ({price}) — مستويات غلط!")
+                return None
+            if tp >= price:
+                print(f"⚠️ TP ({tp}) >= سعر البيع ({price}) — الفرصة فاتت!")
+                return None
+            order_type = self.mt5.ORDER_TYPE_SELL
+
+        print(f"   🔄 Market Order: {signal} {lots} lots @ {price}")
+
         request = {
             "action": self.mt5.TRADE_ACTION_DEAL,
             "symbol": symbol,
             "volume": lots,
             "type": order_type,
             "price": price,
-            "sl": stop_loss,
-            "tp": take_profit,
+            "sl": sl,
+            "tp": tp,
             "deviation": MT5_DEVIATION,
             "magic": MT5_MAGIC_NUMBER,
             "comment": "ICT Bot",
@@ -250,9 +271,77 @@ class Executor:
             "type_filling": self.mt5.ORDER_FILLING_IOC,
         }
 
-        # إرسال الأمر
         result = self.mt5.order_send(request)
+        return self._handle_result(result, signal, lots, sl, tp, "MARKET")
 
+    def _execute_limit_order(self, signal, symbol, lots, entry, sl, tp, sym_info):
+        """وضع أمر معلّق Limit"""
+        price = sym_info["bid"] if signal == "SELL" else sym_info["ask"]
+
+        if signal == "BUY":
+            if entry >= price:
+                # السعر تحت الدخول → Buy Limit (ننتظر السعر ينزل للدخول)
+                # لكن هذا يعني السعر لسا ما وصل فوق... غريب
+                # عادةً Buy Limit = ندخل عند سعر أقل
+                order_type = self.mt5.ORDER_TYPE_BUY_LIMIT
+                # لو الدخول فوق السعر الحالي = ننتظر السعر يرتفع = Buy Stop
+                order_type = self.mt5.ORDER_TYPE_BUY_STOP
+            else:
+                # الدخول تحت السعر → Buy Limit (ننتظر السعر ينزل)
+                order_type = self.mt5.ORDER_TYPE_BUY_LIMIT
+        else:  # SELL
+            if entry <= price:
+                # الدخول تحت السعر → Sell Stop
+                order_type = self.mt5.ORDER_TYPE_SELL_STOP
+            else:
+                # الدخول فوق السعر → Sell Limit (ننتظر السعر يرتفع)
+                order_type = self.mt5.ORDER_TYPE_SELL_LIMIT
+
+        order_name = {
+            self.mt5.ORDER_TYPE_BUY_LIMIT: "BUY LIMIT",
+            self.mt5.ORDER_TYPE_BUY_STOP: "BUY STOP",
+            self.mt5.ORDER_TYPE_SELL_LIMIT: "SELL LIMIT",
+            self.mt5.ORDER_TYPE_SELL_STOP: "SELL STOP",
+        }.get(order_type, "PENDING")
+
+        print(f"   ⏳ {order_name}: {lots} lots @ {entry}")
+        print(f"   📍 السعر الحالي: {price} | ننتظر الوصول لـ {entry}")
+
+        # التحقق من المستويات
+        if signal == "BUY":
+            if sl >= entry:
+                print(f"⚠️ SL ({sl}) >= Entry ({entry}) — مستويات غلط!")
+                return None
+            if tp <= entry:
+                print(f"⚠️ TP ({tp}) <= Entry ({entry}) — مستويات غلط!")
+                return None
+        else:
+            if sl <= entry:
+                print(f"⚠️ SL ({sl}) <= Entry ({entry}) — مستويات غلط!")
+                return None
+            if tp >= entry:
+                print(f"⚠️ TP ({tp}) >= Entry ({entry}) — مستويات غلط!")
+                return None
+
+        request = {
+            "action": self.mt5.TRADE_ACTION_PENDING,
+            "symbol": symbol,
+            "volume": lots,
+            "type": order_type,
+            "price": entry,
+            "sl": sl,
+            "tp": tp,
+            "magic": MT5_MAGIC_NUMBER,
+            "comment": "ICT Bot Limit",
+            "type_time": self.mt5.ORDER_TIME_GTC,
+            "type_filling": self.mt5.ORDER_FILLING_RETURN,
+        }
+
+        result = self.mt5.order_send(request)
+        return self._handle_result(result, signal, lots, sl, tp, order_name, entry)
+
+    def _handle_result(self, result, signal, lots, sl, tp, order_type, entry=None):
+        """معالجة نتيجة الأمر"""
         if result is None:
             print(f"❌ order_send فشل: {self.mt5.last_error()}")
             return None
@@ -261,17 +350,19 @@ class Executor:
             print(f"❌ فشل تنفيذ الصفقة: {result.retcode} — {result.comment}")
             return None
 
-        print(f"✅ تم فتح صفقة: {signal} {lots} lots @ {result.price}")
-        print(f"   SL: {stop_loss} | TP: {take_profit}")
+        exec_price = entry if entry else result.price
+        print(f"✅ تم: {order_type} {signal} {lots} lots @ {exec_price}")
+        print(f"   SL: {sl} | TP: {tp}")
         print(f"   Ticket: {result.order}")
 
         return {
             "ticket": result.order,
-            "price": result.price,
+            "price": exec_price,
             "lots": lots,
             "signal": signal,
-            "sl": stop_loss,
-            "tp": take_profit,
+            "sl": sl,
+            "tp": tp,
+            "order_type": order_type,
         }
 
     def close_position(self, ticket=None, symbol=None):
