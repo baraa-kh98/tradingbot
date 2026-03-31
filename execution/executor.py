@@ -199,23 +199,19 @@ class Executor:
             return None
 
         # ═══ تحقق من السعر ═══
-        # لا تنفّذ إذا السعر الحالي بعيد جداً عن سعر الدخول المطلوب
-        # أو إذا السعر وصل الـ TP (الصفقة فاتت)
-        entry_deviation = abs(price - (stop_loss + take_profit) / 2)  # بُعد عن المنتصف
-        sl_distance = abs(price - stop_loss)
-        tp_distance = abs(price - take_profit)
+        # فقط حماية من تنفيذ صفقة وصل سعرها لـ TP
+        print(f"   📍 السعر الحالي: {price} | SL: {stop_loss} | TP: {take_profit}")
 
-        # إذا السعر أقرب لـ TP من SL = الفرصة راحت
-        if tp_distance < sl_distance * 0.3:
-            print(f"⚠️ السعر ({price}) قريب جداً من TP ({take_profit}) — الفرصة فاتت!")
-            return None
-
-        # إذا السعر بعيد أكثر من 50% عن المدى
-        expected_entry = stop_loss + (take_profit - stop_loss) * (0.5 if signal == "BUY" else 0.5)
-        max_deviation = abs(take_profit - stop_loss) * 0.4
-        if abs(price - expected_entry) > max_deviation:
-            print(f"⚠️ السعر ({price}) بعيد عن الدخول المتوقع — تجاوز!")
-            return None
+        if signal == "BUY":
+            # للشراء: لا تشتري إذا السعر فوق TP
+            if price >= take_profit:
+                print(f"⚠️ السعر ({price}) فوق TP ({take_profit}) — الفرصة فاتت!")
+                return None
+        else:  # SELL
+            # للبيع: لا تبيع إذا السعر تحت TP
+            if price <= take_profit:
+                print(f"⚠️ السعر ({price}) تحت TP ({take_profit}) — الفرصة فاتت!")
+                return None
 
         # التأكد من حجم اللوت
         lots = max(lots, sym_info["lot_min"])

@@ -241,7 +241,14 @@ def run_bot():
             except Exception as je:
                 print(f"⚠️ فشل تسجيل الصفقة: {je}")
         else:
-            notifier.send("❌ فشل تنفيذ الصفقة على MT5")
+            sym = executor.get_symbol_info()
+            current = f"Bid:{sym['bid']} Ask:{sym['ask']}" if sym else "?"
+            notifier.send(
+                f"❌ فشل تنفيذ الصفقة على MT5\n"
+                f"📍 السعر الحالي: {current}\n"
+                f"📦 اللوت: {lots}\n"
+                f"تحقق من: AutoTrading مفعّل + الرصيد كافي"
+            )
     except Exception as e:
         notifier.send(f"❌ خطأ في التنفيذ: {e}")
 
