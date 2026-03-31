@@ -536,6 +536,8 @@ class ICTSignalGenerator:
             report_lines.append("\n── التفاصيل ──")
             for detail in signal["details"]:
                 report_lines.append(detail)
+        elif signal["action"] == "WAIT" and signal.get("reason"):
+            report_lines.append(f"\n⚠️ {signal['reason']}")
 
         # تفاصيل متقدمة
         sb = self.advanced.get("silver_bullet", {})

@@ -144,7 +144,8 @@ MACRO_MIN_SCORE = 20
 KILL_ZONES = {
     "asian":    {"start": "20:00", "end": "00:00"},
     "london":   {"start": "02:00", "end": "05:00"},
-    "new_york": {"start": "07:00", "end": "10:00"},
+    "new_york_am": {"start": "07:00", "end": "10:00"},
+    "new_york_pm": {"start": "13:30", "end": "16:00"},
 }
 
 KILL_ZONE_FILTER = True
