@@ -34,10 +34,10 @@ from config import (
 
 
 def run_bot():
-    """تشغيل البوت — دورة واحدة"""
+    """تشغيل البوت — فحص جميع الأزواج واختيار الأفضل"""
 
     notifier = Notifier(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
-    notifier.send("🤖 البوت شغّال — تحليل ICT...")
+    notifier.send(f"🤖 البوت شغّال — فحص {len(ACTIVE_PAIRS)} أزواج...")
 
     # ═══════════════════════════════════════════════════════════
     # 1. الاتصال بـ MT5
@@ -57,39 +57,13 @@ def run_bot():
         )
 
     # ═══════════════════════════════════════════════════════════
-    # 2. جلب البيانات (Multi-Timeframe)
-    # ═══════════════════════════════════════════════════════════
-
-    feed = DataFeed()
-
-    try:
-        htf_data = feed.get_htf_data()
-        ltf_data = feed.get_ltf_data()
-        current_price = feed.get_latest_price()
-
-        if htf_data is None or ltf_data is None:
-            notifier.send("❌ فشل جلب البيانات!")
-            executor.disconnect()
-            return
-
-        notifier.send(f"📊 السعر الحالي: {current_price}")
-    except Exception as e:
-        notifier.send(f"❌ خطأ في جلب البيانات: {e}")
-        executor.disconnect()
-        return
-
-    # ═══════════════════════════════════════════════════════════
-    # 3. تحليل الماكرو (اختياري)
+    # 2. ذكاء السوق (أخبار + سنتيمنت)
     # ═══════════════════════════════════════════════════════════
 
     macro_result = None
-
-    # ذكاء السوق الشامل (FinnHub + DXY + VIX + قوة العملات)
     intel = MarketIntelligence()
     try:
         can_trade, blockers, intel_data = intel.should_trade()
-
-        # إرسال تقرير ذكاء السوق
         notifier.send(intel.get_report())
 
         if not can_trade:
@@ -97,55 +71,69 @@ def run_bot():
             executor.disconnect()
             return
 
-        # استخدام ميل ذكاء السوق كـ macro filter
         intel_bias, intel_score, _ = intel.get_usdjpy_bias()
         macro_result = {"bias": intel_bias, "score": intel_score}
     except Exception as e:
         print(f"⚠️ خطأ في ذكاء السوق (مكمّلين): {e}")
 
     # ═══════════════════════════════════════════════════════════
-    # 4. تحليل ICT وتوليد الإشارة
+    # 3. فحص جميع الأزواج (Multi-Pair Scanner)
     # ═══════════════════════════════════════════════════════════
 
-    try:
-        signal_gen = ICTSignalGenerator(htf_data, ltf_data)
-        signal = signal_gen.get_signal()
-        levels = signal_gen.get_levels()
+    from strategy.multi_pair import MultiPairScanner
 
-        # إرسال التقرير الكامل
-        full_report = signal_gen.get_full_report()
-        notifier.send(full_report)
-    except Exception as e:
-        notifier.send(f"❌ خطأ في تحليل ICT: {e}")
+    scanner = MultiPairScanner()
+    scanner.scan_all()
+
+    # إرسال تقرير الفحص
+    notifier.send(scanner.get_report())
+
+    # الصفقات المفتوحة حالياً
+    open_positions = executor.get_open_positions()
+    open_pairs = set()
+    for pos in open_positions:
+        for pname, pcfg in TRADING_PAIRS.items():
+            if pcfg["mt5"] in str(getattr(pos, "symbol", "")):
+                open_pairs.add(pname)
+
+    # اختيار أفضل فرصة مع فلتر الارتباط
+    best = scanner.get_best_opportunity(open_pairs=open_pairs)
+
+    if best is None:
+        notifier.send("⏳ لا توجد فرص بالتقاء كافي — ننتظر...")
         executor.disconnect()
         return
 
     # ═══════════════════════════════════════════════════════════
-    # 5. اتخاذ القرار
+    # 4. تنفيذ أفضل فرصة
     # ═══════════════════════════════════════════════════════════
 
-    if signal["action"] == "WAIT":
-        notifier.send("⏳ لا توجد فرصة حالياً — البوت ينتظر...")
-        executor.disconnect()
-        return
+    pair_name = best["pair"]
+    pair_config = best["config"]
+    signal = best
+    levels = best["levels"]
+    final_action = best["action"]
+
+    notifier.send(
+        f"🏆 أفضل فرصة: {pair_name}\n"
+        f"📍 {final_action} | التقاء: {best['score']}/140"
+    )
 
     if levels is None:
-        notifier.send("⚠️ لم يتم تحديد مستويات واضحة — البوت ينتظر...")
+        notifier.send(f"⚠️ لم يتم تحديد مستويات لـ {pair_name}")
         executor.disconnect()
         return
 
-    final_action = signal["action"]
-
-    # فلتر الماكرو (اختياري)
-    if USE_MACRO_FILTER and macro_result:
+    # فلتر الماكرو
+    if macro_result:
         if macro_result["bias"] == "BULLISH" and final_action == "SELL":
             if abs(macro_result["score"]) > 50:
-                notifier.send("⚠️ ICT=SELL لكن الماكرو BULLISH قوي — ينتظر...")
+                notifier.send("⚠️ ICT=SELL لكن ذكاء السوق BULLISH قوي — ينتظر...")
                 executor.disconnect()
                 return
         elif macro_result["bias"] == "BEARISH" and final_action == "BUY":
             if abs(macro_result["score"]) > 50:
-                notifier.send("⚠️ ICT=BUY لكن الماكرو BEARISH قوي — ينتظر...")
+                notifier.send("⚠️ ICT=BUY لكن ذكاء السوق BEARISH قوي — ينتظر...")
                 executor.disconnect()
                 return
 
@@ -200,6 +188,7 @@ def run_bot():
     notifier.send(
         f"🚀 تنفيذ صفقة ICT على MT5:\n"
         f"━━━━━━━━━━━━━━━━━━\n"
+        f"🌍 الزوج: {pair_name}\n"
         f"📍 الاتجاه: {final_action}\n"
         f"💰 الدخول: {levels['entry']}\n"
         f"🛑 وقف الخسارة: {levels['stop_loss']}\n"
@@ -208,7 +197,7 @@ def run_bot():
         f"📦 الحجم: {lots} lots\n"
         f"💵 المخاطرة: ${trade_info['risk_amount']}\n"
         f"🔑 نوع الدخول: {levels['entry_type']}\n"
-        f"📊 الالتقاء: {signal['confluence_score']}/100"
+        f"📊 الالتقاء: {best['score']}/140"
         f"{tp_info}"
     )
 
@@ -219,6 +208,7 @@ def run_bot():
             stop_loss=levels["stop_loss"],
             take_profit=levels["take_profit"],
             entry_price=levels["entry"],
+            symbol=pair_config["mt5"],
         )
 
         if result:
@@ -302,7 +292,7 @@ if __name__ == "__main__":
         "cycle": 0,
         "last_scan": "",
         "open_trades": 0,
-        "active_pairs": ["USDJPY"],
+        "active_pairs": ACTIVE_PAIRS,
     }
 
     # Telegram Dashboard

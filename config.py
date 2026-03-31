@@ -61,21 +61,21 @@ TRADING_PAIRS = {
         "td": "EUR/USD",
         "pip": 0.0001,
         "spread_pips": 1.2,
-        "enabled": False,
+        "enabled": True,
     },
     "GBPUSD": {
         "mt5": "GBPUSD.BL",
         "td": "GBP/USD",
         "pip": 0.0001,
         "spread_pips": 1.8,
-        "enabled": False,
+        "enabled": True,
     },
     "XAUUSD": {
         "mt5": "XAUUSD.BL",
         "td": "XAU/USD",
         "pip": 0.01,
         "spread_pips": 3.0,
-        "enabled": False,
+        "enabled": True,
     },
 }
 
