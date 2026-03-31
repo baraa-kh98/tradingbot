@@ -208,5 +208,73 @@ def run_bot():
     executor.disconnect()
 
 
+# ═══════════════════════════════════════════════════════════════
+# التشغيل المستمر
+# ═══════════════════════════════════════════════════════════════
+
+SCAN_INTERVAL_MINUTES = 15  # كل 15 دقيقة يحلل السوق
+
+
+def is_market_open():
+    """تحقق إذا سوق الفوركس مفتوح (مغلق السبت والأحد)"""
+    from datetime import datetime
+    import pytz
+    now = datetime.now(pytz.timezone("US/Eastern"))
+    # الفوركس مغلق: الجمعة 17:00 EST → الأحد 17:00 EST
+    if now.weekday() == 5:  # السبت
+        return False
+    if now.weekday() == 6 and now.hour < 17:  # الأحد قبل 5 مساءً
+        return False
+    if now.weekday() == 4 and now.hour >= 17:  # الجمعة بعد 5 مساءً
+        return False
+    return True
+
+
 if __name__ == "__main__":
-    run_bot()
+    import time
+    import sys
+
+    # وضع الدورة الواحدة
+    if "--once" in sys.argv:
+        print("🔄 وضع الدورة الواحدة...")
+        run_bot()
+        sys.exit(0)
+
+    # الوضع المستمر 24/7
+    notifier = Notifier(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
+    notifier.send(
+        f"🤖 البوت بدأ التشغيل المستمر!\n"
+        f"⏱️ فحص كل {SCAN_INTERVAL_MINUTES} دقيقة\n"
+        f"📊 الزوج: USDJPY\n"
+        f"💡 لإيقاف البوت: Ctrl+C"
+    )
+
+    cycle = 0
+    while True:
+        cycle += 1
+
+        try:
+            if not is_market_open():
+                print(f"\n⏸️ [{time.strftime('%H:%M')}] السوق مغلق (عطلة نهاية الأسبوع)")
+                print(f"   ⏰ الفحص التالي بعد 60 دقيقة...")
+                time.sleep(60 * 60)  # انتظر ساعة وتحقق مرة ثانية
+                continue
+
+            print(f"\n{'═' * 50}")
+            print(f"   🔄 الدورة #{cycle} — {time.strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"{'═' * 50}")
+
+            run_bot()
+
+            print(f"\n⏰ الفحص التالي بعد {SCAN_INTERVAL_MINUTES} دقيقة...")
+            time.sleep(SCAN_INTERVAL_MINUTES * 60)
+
+        except KeyboardInterrupt:
+            print("\n\n🛑 تم إيقاف البوت يدوياً")
+            notifier.send("🛑 تم إيقاف البوت يدوياً")
+            break
+
+        except Exception as e:
+            print(f"\n❌ خطأ غير متوقع: {e}")
+            notifier.send(f"❌ خطأ غير متوقع: {e}\n🔄 إعادة المحاولة بعد دقيقة...")
+            time.sleep(60)  # انتظر دقيقة وحاول مرة ثانية
