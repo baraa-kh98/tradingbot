@@ -198,20 +198,31 @@ class Executor:
             print(f"❌ إشارة غير صالحة: {signal}")
             return None
 
-        # ═══ تحقق من السعر ═══
-        # فقط حماية من تنفيذ صفقة وصل سعرها لـ TP
+        # ═══ تحقق من السعر والمستويات ═══
         print(f"   📍 السعر الحالي: {price} | SL: {stop_loss} | TP: {take_profit}")
 
         if signal == "BUY":
-            # للشراء: لا تشتري إذا السعر فوق TP
-            if price >= take_profit:
-                print(f"⚠️ السعر ({price}) فوق TP ({take_profit}) — الفرصة فاتت!")
+            # للشراء: SL تحت السعر + TP فوق السعر
+            if stop_loss >= price:
+                print(f"⚠️ SL ({stop_loss}) >= سعر الشراء ({price}) — مستويات غلط!")
+                return None
+            if take_profit <= price:
+                print(f"⚠️ TP ({take_profit}) <= سعر الشراء ({price}) — الفرصة فاتت!")
                 return None
         else:  # SELL
-            # للبيع: لا تبيع إذا السعر تحت TP
-            if price <= take_profit:
-                print(f"⚠️ السعر ({price}) تحت TP ({take_profit}) — الفرصة فاتت!")
+            # للبيع: SL فوق السعر + TP تحت السعر
+            if stop_loss <= price:
+                print(f"⚠️ SL ({stop_loss}) <= سعر البيع ({price}) — مستويات غلط!")
                 return None
+            if take_profit >= price:
+                print(f"⚠️ TP ({take_profit}) >= سعر البيع ({price}) — الفرصة فاتت!")
+                return None
+
+        # التأكد من مسافة SL كافية (حد أدنى من الوسيط)
+        min_stop_distance = sym_info.get("point", 0.001) * 10  # عادةً 10 نقاط
+        if abs(price - stop_loss) < min_stop_distance:
+            print(f"⚠️ SL قريب جداً ({abs(price - stop_loss):.3f}) — الحد الأدنى: {min_stop_distance}")
+            return None
 
         # التأكد من حجم اللوت
         lots = max(lots, sym_info["lot_min"])
