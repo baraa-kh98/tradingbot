@@ -417,6 +417,9 @@ class ICTSignalGenerator:
         if signal["action"] == "WAIT":
             return None
 
+        # إعادة بناء الحالة للأتجاه الفائز (لمنع تداخلات المتغيرات)
+        self._calculate_confluence(signal["action"])
+
         ltf = self.ltf_analysis
         liquidity = ltf["liquidity"]
         pd_zones = ltf["pd_zones"]
