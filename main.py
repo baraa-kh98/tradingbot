@@ -381,6 +381,7 @@ if __name__ == "__main__":
     cycle = 0
     last_day = None
     last_report_day = None
+    last_vision_day = None
 
     while True:
         cycle += 1
@@ -408,6 +409,19 @@ if __name__ == "__main__":
                             dashboard.send(opt_report)
                         except Exception:
                             pass
+
+            # تقرير الرؤية الصباحية عبر الإيميل
+            from config import VISION_REPORT_HOUR
+            if datetime.now().hour == VISION_REPORT_HOUR and last_vision_day != today:
+                last_vision_day = today
+                try:
+                    from strategy.ai_vision import AIVisionGenerator
+                    vision_gen = AIVisionGenerator()
+                    sent = vision_gen.execute_daily_vision()
+                    if sent:
+                        notifier.send("📧 تم إعداد وتوليد الرؤية الاقتصادية الصباحية بنجاح وإرسالها لإيميلك!")
+                except Exception as vi_err:
+                    print(f"⚠️ خطأ في توليد رؤية الإيميل: {vi_err}")
 
             if not is_market_open():
                 print(f"\n⏸️ [{time.strftime('%H:%M')}] السوق مغلق (عطلة نهاية الأسبوع)")

@@ -38,6 +38,11 @@ FRED_API_KEY = os.getenv("FRED_API_KEY", "")
 # FinnHub (أخبار + تقويم اقتصادي)
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
 
+# Email Reporting (الرؤية اليومية)
+EMAIL_SENDER = os.getenv("EMAIL_SENDER", "")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "")  #كلمة مرور التطبيق (App Password) وليس الأساسية
+EMAIL_RECEIVER = "baraakhatab48@gmail.com"
+VISION_REPORT_HOUR = 8  # يتولد التقرير ويرسل الساعة 8 صباحاً بتوقيت السيرفر
 
 # ═══════════════════════════════════════════════════════════════
 # Trading Pairs — أزواج متعددة
