@@ -17,6 +17,11 @@ class SimulationEngine:
         self.m5_df.sort_values(by='time', inplace=True)
         self.h1_df.sort_values(by='time', inplace=True)
         
+        # توحيد أسماء الأعمدة لتتوافق مع ما ينتظره ICTSignalGenerator
+        rename_map = {'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'tick_volume': 'Volume', 'real_volume': 'Volume'}
+        self.m5_df.rename(columns=rename_map, inplace=True)
+        self.h1_df.rename(columns=rename_map, inplace=True)
+        
         self.m5_df.reset_index(drop=True, inplace=True)
         self.h1_df.reset_index(drop=True, inplace=True)
 
@@ -42,6 +47,9 @@ class SimulationEngine:
             elif sell_score >= 70 and sell_score > buy_score:
                 return {"direction": "SELL", "score": sell_score, "levels": sell_levels, "reasons": sell_reasons}
         except Exception as e:
+            import traceback
+            print("❌ خطأ أثناء تقييم الإشارة:")
+            traceback.print_exc()
             pass
         return None
 
@@ -63,14 +71,14 @@ class SimulationEngine:
             # --- معالجة الصفقة الفعالة (الحالية) ---
             if self.active_trade:
                 if self.active_trade['direction'] == 'BUY':
-                    if curr_candle['low'] <= self.active_trade['sl']:
+                    if curr_candle['Low'] <= self.active_trade['sl']:
                         self.active_trade['close_reason'] = 'SL'
                         self.active_trade['pnl'] = -abs(self.active_trade['entry'] - self.active_trade['sl']) * 10
                         self.active_trade['pips'] = -15  # تقريبي لأغراض AI
                         self.active_trade['rr_achieved'] = -1.0
                         self.journal_trades.append(self.active_trade)
                         self.active_trade = None
-                    elif curr_candle['high'] >= self.active_trade['tp']:
+                    elif curr_candle['High'] >= self.active_trade['tp']:
                         self.active_trade['close_reason'] = 'TP'
                         self.active_trade['pnl'] = abs(self.active_trade['tp'] - self.active_trade['entry']) * 10
                         self.active_trade['pips'] = 30
@@ -79,14 +87,14 @@ class SimulationEngine:
                         self.active_trade = None
 
                 else: # SELL
-                    if curr_candle['high'] >= self.active_trade['sl']:
+                    if curr_candle['High'] >= self.active_trade['sl']:
                         self.active_trade['close_reason'] = 'SL'
                         self.active_trade['pnl'] = -abs(self.active_trade['sl'] - self.active_trade['entry']) * 10
                         self.active_trade['pips'] = -15
                         self.active_trade['rr_achieved'] = -1.0
                         self.journal_trades.append(self.active_trade)
                         self.active_trade = None
-                    elif curr_candle['low'] <= self.active_trade['tp']:
+                    elif curr_candle['Low'] <= self.active_trade['tp']:
                         self.active_trade['close_reason'] = 'TP'
                         self.active_trade['pnl'] = abs(self.active_trade['entry'] - self.active_trade['tp']) * 10
                         self.active_trade['pips'] = 30
