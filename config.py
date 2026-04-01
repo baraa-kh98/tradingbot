@@ -112,7 +112,7 @@ SWING_LOOKBACK = 5              # عدد الشموع لتحديد Swing High/Lo
 # Order Blocks
 OB_DISPLACEMENT_MULTIPLIER = 1.5
 OB_MAX_AGE = 50
-OB_BUFFER_PIPS = 10
+OB_BUFFER_PIPS = 8
 
 # Fair Value Gaps
 FVG_MIN_SIZE_PIPS = 5
