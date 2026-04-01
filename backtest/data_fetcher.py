@@ -32,12 +32,11 @@ class HistoricalDataFetcher:
         now = datetime.now()
 
         # حساب عدد الشموع التقريبي
-        # M5: 24 ساعة * 12 شمعة = 288، ضرب 730 يوم = 210,000 شمعة
         limit_m5 = days_back * 288
         limit_h1 = days_back * 24
 
-        # سحب M5
-        rates_m5 = mt5.copy_rates_from(symbol, mt5.TIMEFRAME_M5, now, limit_m5)
+        # سحب M5 باستخدام البوزيشن لتفادي أخطاء التوقيت
+        rates_m5 = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M5, 0, limit_m5)
         if rates_m5 is None or len(rates_m5) == 0:
             print(f"❌ فشل جلب بيانات M5: {mt5.last_error()}")
             return False
@@ -46,7 +45,7 @@ class HistoricalDataFetcher:
         df_m5['time'] = pd.to_datetime(df_m5['time'], unit='s')
         
         # سحب H1
-        rates_h1 = mt5.copy_rates_from(symbol, mt5.TIMEFRAME_H1, now, limit_h1)
+        rates_h1 = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H1, 0, limit_h1)
         if rates_h1 is None or len(rates_h1) == 0:
             print(f"❌ فشل جلب بيانات H1: {mt5.last_error()}")
             return False
