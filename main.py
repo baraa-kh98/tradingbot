@@ -118,7 +118,7 @@ def run_bot():
         final_action = best["action"]
 
         notifier.send(
-            f"🏆 فرصة جديدة مفعّلة: {pair_name}\n"
+            f"🔍 تم اصطياد فرصة جديدة (قيد الفحص الختامي): {pair_name}\n"
             f"📍 {final_action} | التقاء: {best['score']}/140"
         )
 

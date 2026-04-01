@@ -116,7 +116,12 @@ class MultiPairScanner:
 
             # 2. فلتر الارتباط (مع الصفقات المفتوحة مسبقاً + الصفقات التي تم قبولها الآن)
             currently_active = open_pairs.union({c["pair"] for c in accepted})
+            
+            # فلتر أساسي: منع الدخول في زوج يوجد عليه صفقة مفتوحة بالفعل
             is_correlated = False
+            if pair in currently_active:
+                is_correlated = True
+            
             for group in CORRELATED_GROUPS:
                 # إذا كان الزوج ضمن هذه المجموعة، وهناك زوج آخر من نفس المجموعة مفتوح
                 if pair in group and group & currently_active:
