@@ -32,13 +32,20 @@ class HistoricalDataFetcher:
         now = datetime.now()
 
         # حساب عدد الشموع التقريبي
-        limit_m5 = days_back * 288
+        limit_m5 = min(days_back * 288, 99000) # الحد الأقصى الآمن لمعظم البروكرز هو 100,000 شمعة
         limit_h1 = days_back * 24
 
         # سحب M5 باستخدام البوزيشن لتفادي أخطاء التوقيت
         rates_m5 = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M5, 0, limit_m5)
+        
+        # تجربة كمية أقل إذا تم الرفض (Invalid params بسبب ضخامة الرقم)
         if rates_m5 is None or len(rates_m5) == 0:
-            print(f"❌ فشل جلب بيانات M5: {mt5.last_error()}")
+            print(f"⚠️ السيرفر رفض جلب {limit_m5} شمعة M5، سيتم المحاولة بـ 50,000 شمعة فقط...")
+            limit_m5 = 50000
+            rates_m5 = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M5, 0, limit_m5)
+            
+        if rates_m5 is None or len(rates_m5) == 0:
+            print(f"❌ فشل جلب بيانات M5 نهائياً: {mt5.last_error()}")
             return False
             
         df_m5 = pd.DataFrame(rates_m5)
