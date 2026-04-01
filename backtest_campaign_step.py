@@ -9,7 +9,7 @@ from utils.email_sender import EmailReporter
 
 # نحتاج لتحميل مفتاح API لـ Claude
 load_dotenv()
-API_KEY = os.getenv("ANTHROPIC_API_KEY")
+API_KEY = os.getenv("CLAUDE_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
 
 def run_campaign_step(symbol="USDJPY.BL", chunk_index=1, chunk_size=30000):
     m5_path = f"backtest_data/{symbol}_M5_history.csv"
