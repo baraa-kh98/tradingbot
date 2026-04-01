@@ -31,6 +31,7 @@ from config import (
     USE_MACRO_FILTER,
     MACRO_MIN_SCORE,
     ACTIVE_PAIRS,
+    TRADING_PAIRS,
 )
 
 
