@@ -70,29 +70,43 @@ def run_campaign_step(symbol="USDJPY.BL", chunk_index=1, chunk_size=30000):
             except:
                 pass
                 
-    # 4. التوجه إلى Claude API للتحليل وكتابة التقرير
+    # 5. التوجه إلى Claude API للتحليل وكتابة التقرير
+    html_report = ""
     if not API_KEY:
-        print("⚠️ لم يتم العثور على ANTHROPIC_API_KEY. لن يتم إرسال الإيميل.")
-        return
+        print("⚠️ لم يتم العثور على CLAUDE_API_KEY. لن يتم استدعاء الماكرو.")
+    else:
+        print("\n🤖 يتم الآن استدعاء Claude لإنشاء الرؤية الاقتصادية وبناء الذاكرة التاريخية...")
+        analyzer = MacroAnalyzer(API_KEY)
+        html_report = analyzer.generate_campaign_report(start_date, end_date, stats, past_memory)
         
-    print("\n🤖 يتم الآن استدعاء Claude لإنشاء الرؤية الاقتصادية وبناء الذاكرة التاريخية...")
-    analyzer = MacroAnalyzer(API_KEY)
-    html_report = analyzer.generate_campaign_report(start_date, end_date, stats, past_memory)
+        # استخراج إضافة الذاكرة الحالية (Update to System Memory)
+        new_memory = f"Memory for {start_date} to {end_date}: Winrate {stats.get('win_rate')}%, PnL ${stats.get('total_pnl')}."
+        try:
+            for line in html_report.split('\n'):
+                if "Memory" in line and not line.startswith("<h"):
+                    new_memory += f" AI Logic: {line.strip()[:100]}"
+                    break
+        except:
+            pass
+            
+        memory_store.append(new_memory)
+        os.makedirs("journal", exist_ok=True)
+        with open(memory_path, "w", encoding="utf-8") as f:
+            json.dump(memory_store, f, indent=4, ensure_ascii=False)
+            
+    # 6. تحديث الأرشيف التراكمي للروبرت الرياضي والماكرو (Captain's Log)
+    from backtest.archive_manager import ArchiveManager
+    from strategy.self_optimizer import SelfOptimizer
+    import sys
     
-    # 5. استخراج إضافة الذاكرة الحالية (Update to System Memory)
-    new_memory = f"Memory for {start_date} to {end_date}: Winrate {stats.get('win_rate')}%, PnL ${stats.get('total_pnl')}."
-    try:
-        for line in html_report.split('\n'):
-            if "Memory" in line and not line.startswith("<h"):
-                new_memory += f" AI Logic: {line.strip()[:100]}"
-                break
-    except:
-        pass
-        
-    memory_store.append(new_memory)
-    os.makedirs("journal", exist_ok=True)
-    with open(memory_path, "w", encoding="utf-8") as f:
-        json.dump(memory_store, f, indent=4, ensure_ascii=False)
+    # نجلب الدروس لمعرفة النصائح
+    opt = SelfOptimizer(journal)
+    suggestions = opt.analyze_and_suggest(min_trades=2)
+    
+    archive = ArchiveManager()
+    archive.append_trades_to_json(simulated_trades, chunk_index, start_date, end_date)
+    archive.append_summary_to_md(chunk_index, start_date, end_date, stats, suggestions, html_report)
+
         
     # 6. إرسال الإيميل
     print("\n📧 جاري إرسال التقرير للإيميل...")
