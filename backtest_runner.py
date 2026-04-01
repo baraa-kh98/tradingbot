@@ -48,5 +48,5 @@ def run_chunked_backtest(symbol="USDJPY.BL", chunk_index=0, chunk_size=30000):
     print("\n✅ انتهت الجولة. لتشغيل الجزء التالي يمكنك تغيير chunk_index في السكريبت.")
 
 if __name__ == "__main__":
-    # تشغيل الدفعة الأولى (أول 30,000 شمعة = تقريباً 100 يوم)
-    run_chunked_backtest("USDJPY.BL", chunk_index=0)
+    # تشغيل الدفعة الثانية (الـ 30,000 شمعة التالية = لتقييم الثلاثة أشهر الجديدة)
+    run_chunked_backtest("USDJPY.BL", chunk_index=1)
