@@ -26,11 +26,15 @@ def run_chunked_backtest(symbol="USDJPY.BL", chunk_index=0, chunk_size=30000):
     # engine.run_chunk(start_idx, min(end_idx, len(engine.m5_df)))
     print("⚠️ (تم تخطي المحاكاة التفصيلية هنا في الكود التوضيحي، يتطلب تفعيل loop المحرك)")
     
-    # محاكاة دفتر يوميات بصيغة وهمية (كأنه خرج من engine.journal_trades)
+    # محاكاة دفتر يوميات بصيغة كاملة لتشغيل محرك الدروس
     simulated_trades = [
-        {"pair": "USDJPY", "status": "CLOSED", "close_reason": "TP", "pnl_pips": 40},
-        {"pair": "USDJPY", "status": "CLOSED", "close_reason": "SL", "pnl_pips": -15},
-        # سيتم تعبئتها من الـ engine الفعلي
+        {"ticket": 1, "pair": "USDJPY", "status": "CLOSED", "direction": "BUY", "close_reason": "TP", 
+         "pips": 40, "pnl": 40, "entry": 140.0, "sl": 139.8, "tp": 140.4, 
+         "rr_achieved": 2.0, "confluence_score": 85, "entry_type": "OB", "session": "LONDON", "lessons": []},
+         
+        {"ticket": 2, "pair": "USDJPY", "status": "CLOSED", "direction": "SELL", "close_reason": "SL", 
+         "pips": -15, "pnl": -15, "entry": 141.0, "sl": 141.15, "tp": 140.7, 
+         "rr_achieved": -1.0, "confluence_score": 60, "entry_type": "MARKET", "session": "NY_PM", "lessons": []},
     ]
     
     # 2. ترحيل النتائج لدفتر افتراضي
