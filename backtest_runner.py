@@ -21,31 +21,27 @@ def run_chunked_backtest(symbol="USDJPY.BL", chunk_index=0, chunk_size=30000):
     end_idx = start_idx + chunk_size
     engine = SimulationEngine(m5_path, h1_path, chunk_size)
     
-    # محاكاة القراءة وتوليد الصفقات (تأخذ وقتاً طويلاً)
-    # سيتم تشغيلها وهمياً أو حقيقياً هنا:
-    # engine.run_chunk(start_idx, min(end_idx, len(engine.m5_df)))
-    print("⚠️ (تم تخطي المحاكاة التفصيلية هنا في الكود التوضيحي، يتطلب تفعيل loop المحرك)")
+    # المحاكاة العميقة (Deep Simulation) سيطبع لك تقدمه حتى لا تظن أن السيرفر معلق
+    engine.run_chunk(start_idx, min(end_idx, len(engine.m5_df)))
     
-    # محاكاة دفتر يوميات بصيغة كاملة لتشغيل محرك الدروس
-    simulated_trades = [
-        {"ticket": 1, "pair": "USDJPY", "status": "CLOSED", "direction": "BUY", "close_reason": "TP", 
-         "pips": 40, "pnl": 40, "entry": 140.0, "sl": 139.8, "tp": 140.4, 
-         "rr_achieved": 2.0, "confluence_score": 85, "entry_type": "OB", "session": "LONDON", "lessons": []},
-         
-        {"ticket": 2, "pair": "USDJPY", "status": "CLOSED", "direction": "SELL", "close_reason": "SL", 
-         "pips": -15, "pnl": -15, "entry": 141.0, "sl": 141.15, "tp": 140.7, 
-         "rr_achieved": -1.0, "confluence_score": 60, "entry_type": "MARKET", "session": "NY_PM", "lessons": []},
-    ]
-    
-    # 2. ترحيل النتائج لدفتر افتراضي
+    # تفريغ الصفقات التي التقطها المحرك بناءً على 140 نقطة التقاء
+    simulated_trades = []
+    for t in engine.journal_trades:
+        t["status"] = "CLOSED" 
+        t["lessons"] = []
+        simulated_trades.append(t)
+        
+    print(f"\n✅ إجمالي الصفقات المكتشفة في هذا القطاع: {len(simulated_trades)}")
+
+    # 2. ترحيل النتائج لدفتر افتراضي لاستخلاص الدروس
     journal = TradeJournal()
-    journal.trades = simulated_trades  # ملء الدفتر بالصفقات الوهمية
+    journal.trades = simulated_trades
     
-    # 3. إرسال لـ SelfOptimizer لاستخلاص الدروس (لا يستهلك Claude tokens)
+    # 3. إرسال لـ SelfOptimizer لاستخلاص الدروس (Zero API Cost)
     opt = SelfOptimizer(journal)
     suggestions = opt.analyze_and_suggest(min_trades=2)
     
-    print("\n💡 الدروس المستفادة من هذا الجزء (بدون استخدام توكنز API):")
+    print("\n💡 الدروس المستفادة الحقيقية من هذا الجزء:")
     for s in suggestions:
         print(f" - {s}")
         
