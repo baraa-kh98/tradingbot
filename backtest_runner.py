@@ -36,8 +36,17 @@ def run_chunked_backtest(symbol="USDJPY.BL", chunk_index=0, chunk_size=30000):
     # 2. ترحيل النتائج لدفتر افتراضي لاستخلاص الدروس
     journal = TradeJournal()
     journal.trades = simulated_trades
+    # 3. طباعة إحصائيات الأداء الكلية (Statistics)
+    stats = journal.get_stats()
+    print("\n📊 إحصائيات الأداء لفترة الباكتيست (محاكاة واقعية 100%):")
+    print(f" - إجمالي الصفقات المغلقة: {stats.get('total', 0)}")
+    print(f" - الصفقات الرابحة: {stats.get('wins', 0)} | الصفقات الخاسرة: {stats.get('losses', 0)}")
+    print(f" - نسبة النجاح (Win Rate): {stats.get('win_rate', 0)}%")
+    print(f" - إجمالي النقاط (Pips): {stats.get('total_pips', 0)}")
+    print(f" - صافي الربح التقديري (PnL): ${stats.get('total_pnl', 0)}")
+    print(f" - عامل الربح (Profit Factor): {stats.get('profit_factor', 0)}")
     
-    # 3. إرسال لـ SelfOptimizer لاستخلاص الدروس (Zero API Cost)
+    # 4. إرسال لـ SelfOptimizer لاستخلاص الدروس (Zero API Cost)
     opt = SelfOptimizer(journal)
     suggestions = opt.analyze_and_suggest(min_trades=2)
     
@@ -48,5 +57,6 @@ def run_chunked_backtest(symbol="USDJPY.BL", chunk_index=0, chunk_size=30000):
     print("\n✅ انتهت الجولة. لتشغيل الجزء التالي يمكنك تغيير chunk_index في السكريبت.")
 
 if __name__ == "__main__":
-    # تشغيل الدفعة الثانية (الـ 30,000 شمعة التالية = لتقييم الثلاثة أشهر الجديدة)
-    run_chunked_backtest("USDJPY.BL", chunk_index=1)
+    # تشغيل الدفعة الأولى مجدداً لطباعة الإحصائيات (أول 30,000 شمعة)
+    # بعدها يمكنك تغييرها إلى 1 للربع الثاني
+    run_chunked_backtest("USDJPY.BL", chunk_index=0)
