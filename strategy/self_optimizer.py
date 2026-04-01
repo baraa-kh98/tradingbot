@@ -11,6 +11,7 @@ Self Optimizer — تحسين ذاتي للاستراتيجية
 
 import json
 import os
+import config
 from datetime import datetime
 
 
@@ -105,8 +106,8 @@ class SelfOptimizer:
                     "param": "OB_BUFFER_PIPS",
                     "action": "INCREASE",
                     "reason": f"{len(tight_sl)}/{len(sl_hits)} SL hits بسبب SL ضيق",
-                    "current": 5,
-                    "suggested": 8,
+                    "current": getattr(config, 'OB_BUFFER_PIPS', 5),
+                    "suggested": getattr(config, 'OB_BUFFER_PIPS', 5) + 3,
                     "priority": "HIGH",
                 })
 
