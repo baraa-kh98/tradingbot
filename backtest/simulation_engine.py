@@ -32,20 +32,18 @@ class SimulationEngine:
     def evaluate_signal(self, htf_window, ltf_window):
         try:
             gen = ICTSignalGenerator(htf_window, ltf_window)
-            gen.evaluate("BUY")
-            buy_score = gen.score
-            buy_levels = gen.levels
-            buy_reasons = gen.reasons
-
-            gen.evaluate("SELL")
-            sell_score = gen.score
-            sell_levels = gen.levels
-            sell_reasons = gen.reasons
-
-            if buy_score >= 70 and buy_score >= sell_score:
-                return {"direction": "BUY", "score": buy_score, "levels": buy_levels, "reasons": buy_reasons}
-            elif sell_score >= 70 and sell_score > buy_score:
-                return {"direction": "SELL", "score": sell_score, "levels": sell_levels, "reasons": sell_reasons}
+            signal = gen.get_signal()
+            
+            # فلترة الفرص بناء على السكور المطلوب 70 فما فوق
+            if signal["action"] != "WAIT" and signal["confluence_score"] >= 70:
+                levels = gen.get_levels()
+                if levels:
+                    return {
+                        "direction": signal["action"], 
+                        "score": signal["confluence_score"], 
+                        "levels": levels, 
+                        "reasons": signal["details"]
+                    }
         except Exception as e:
             import traceback
             print("❌ خطأ أثناء تقييم الإشارة:")
