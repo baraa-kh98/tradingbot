@@ -77,18 +77,20 @@ def run_campaign_step(symbol="USDJPY.BL", chunk_index=1, chunk_size=30000):
     else:
         print("\n🤖 يتم الآن استدعاء Claude لإنشاء الرؤية الاقتصادية وبناء الذاكرة التاريخية...")
         analyzer = MacroAnalyzer(API_KEY)
-        html_report = analyzer.generate_campaign_report(start_date, end_date, stats, past_memory)
-        
-        # استخراج إضافة الذاكرة الحالية (Update to System Memory)
-        new_memory = f"Memory for {start_date} to {end_date}: Winrate {stats.get('win_rate')}%, PnL ${stats.get('total_pnl')}."
-        try:
-            for line in html_report.split('\n'):
-                if "Memory" in line and not line.startswith("<h"):
-                    new_memory += f" AI Logic: {line.strip()[:100]}"
-                    break
-        except:
-            pass
-            
+        raw_response = analyzer.generate_campaign_report(start_date, end_date, stats, past_memory)
+
+        # استخراج الـ insights بشكل موثوق (JSON بدل string parsing)
+        insights = analyzer.extract_memory_insights(raw_response)
+        if insights:
+            new_memory = f"Q{chunk_index} ({start_date}→{end_date}) WR={stats.get('win_rate')}% PnL=${stats.get('total_pnl')}: " + "; ".join(insights)
+        else:
+            new_memory = f"Q{chunk_index} ({start_date}→{end_date}): WR={stats.get('win_rate')}%, PnL=${stats.get('total_pnl')}"
+
+        # اقتطع الـ MEMORY_JSON من HTML قبل الإرسال
+        marker = "MEMORY_JSON:"
+        idx = raw_response.rfind(marker)
+        html_report = raw_response[:idx].strip() if idx != -1 else raw_response
+
         memory_store.append(new_memory)
         os.makedirs("journal", exist_ok=True)
         with open(memory_path, "w", encoding="utf-8") as f:

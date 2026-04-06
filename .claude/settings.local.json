@@ -3,7 +3,20 @@
     "allow": [
       "Bash(pip install:*)",
       "Bash(pip3 install:*)",
-      "WebFetch(domain:antigravity.google)"
+      "WebFetch(domain:antigravity.google)",
+      "Bash(ls /Users/baraakhattab/Desktop/tradingbot/*.html)",
+      "Bash(/usr/local/bin/python3.14 -c ':*)",
+      "Bash(open /Users/baraakhattab/Desktop/tradingbot/ICTStrategy.html)",
+      "Bash(open /Users/baraakhattab/Desktop/tradingbot/ICT_Backtest_v2.html)",
+      "Bash(open /Users/baraakhattab/Desktop/tradingbot/EMAStrategy.html)",
+      "Bash(open /Users/baraakhattab/Desktop/tradingbot/MacroEMAStrategy.html)",
+      "Bash(/usr/local/bin/python3.14 backtest/ict_backtest.py)",
+      "Bash(open /Users/baraakhattab/Desktop/tradingbot/HybridStrategy.html)",
+      "Bash(/usr/local/bin/python3.14 -c \":*)",
+      "Bash(/usr/local/bin/python3.14 backtest/london_optimizer.py)",
+      "Bash(/usr/local/bin/python3.14 backtest/london_final.py)",
+      "Bash(open -a \"Windows App\")",
+      "Bash(git push:*)"
     ]
   }
 }

@@ -179,6 +179,123 @@ class DataFeed:
         days = period_days or BACKTEST_PERIOD_DAYS
         return self.get_candles(interval=BACKTEST_INTERVAL, period_days=days)
 
+    def get_historical_range(self, start_date: str, end_date: str, interval: str = "1h"):
+        """
+        جلب بيانات تاريخية بين تاريخين محددين — مثالي للباكتست.
+
+        start_date: "2023-01-01"
+        end_date:   "2024-12-31"
+        interval:   "1min" | "5min" | "15min" | "1h" | "1day"
+
+        يستخدم start_date/end_date من Twelve Data API (أدق من outputsize).
+        """
+        # حاول Twelve Data بالـ date range
+        if self.api_key:
+            td = self._get_td_client()
+            if td:
+                try:
+                    ts = td.time_series(
+                        symbol=self.symbol,
+                        interval=interval,
+                        start_date=start_date,
+                        end_date=end_date,
+                        outputsize=5000,   # الحد الأقصى لكل call
+                        timezone="UTC",
+                    )
+                    data = ts.as_pandas()
+                    if data is not None and len(data) > 0:
+                        data = data.sort_index()
+                        data.columns = [c.capitalize() if c.islower() else c for c in data.columns]
+                        for col in ["Open", "High", "Low", "Close"]:
+                            if col in data.columns:
+                                data[col] = pd.to_numeric(data[col], errors="coerce")
+                        if "Volume" not in data.columns:
+                            data["Volume"] = 0
+                        data = data.dropna(subset=["Open", "High", "Low", "Close"])
+                        data["ATR"]    = self._calculate_atr(data)
+                        data["EMA_20"] = data["Close"].ewm(span=20).mean()
+                        data["EMA_50"] = data["Close"].ewm(span=50).mean()
+                        print(f"✅ Twelve Data [{start_date} → {end_date}]: {len(data)} شمعة ({interval})")
+                        return data
+                except Exception as e:
+                    print(f"⚠️ خطأ Twelve Data date-range: {e}")
+
+        # Fallback: yfinance مع حساب الأيام
+        try:
+            import yfinance as yf
+            yf_symbol = self.symbol.replace("/", "") + "=X"
+            yf_interval = interval.replace("min", "m")
+            data = yf.download(
+                yf_symbol,
+                start=start_date, end=end_date,
+                interval=yf_interval,
+                auto_adjust=True, progress=False,
+            )
+            if isinstance(data.columns, pd.MultiIndex):
+                data.columns = [c[0] for c in data.columns]
+            data = data.dropna()
+            data["ATR"]    = self._calculate_atr(data)
+            data["EMA_20"] = data["Close"].ewm(span=20).mean()
+            data["EMA_50"] = data["Close"].ewm(span=50).mean()
+            print(f"✅ yfinance [{start_date} → {end_date}]: {len(data)} شمعة ({yf_interval})")
+            return data
+        except Exception as e:
+            print(f"❌ فشل جلب البيانات التاريخية: {e}")
+            return None
+
+    def get_long_history(self, start_date: str, end_date: str, interval: str = "1h") -> pd.DataFrame:
+        """
+        جلب بيانات تاريخية طويلة (سنوات) عبر تقسيمها لـ chunks.
+        Twelve Data يعطي max 5000 شمعة per call — نجلب في دفعات ونجمعها.
+
+        start_date: "2023-01-01"
+        end_date:   "2025-12-31"
+        interval:   "1h" | "4h" | "1day"
+        """
+        interval_hours = {"1min": 1/60, "5min": 5/60, "15min": 0.25, "30min": 0.5,
+                          "1h": 1, "2h": 2, "4h": 4, "1day": 24}
+        hours_per_candle = interval_hours.get(interval, 1)
+        # كل chunk يغطي ~5000 شمعة
+        chunk_days = int(5000 * hours_per_candle / 24 * 0.85)  # 15% هامش أمان
+        chunk_days = max(30, min(chunk_days, 365))
+
+        start_dt = pd.Timestamp(start_date)
+        end_dt   = pd.Timestamp(end_date)
+
+        all_chunks = []
+        current = start_dt
+
+        while current < end_dt:
+            chunk_end = min(current + pd.Timedelta(days=chunk_days), end_dt)
+            s = current.strftime("%Y-%m-%d")
+            e = chunk_end.strftime("%Y-%m-%d")
+
+            print(f"  ⬇️  جلب {s} → {e} ...")
+            chunk = self.get_historical_range(start_date=s, end_date=e, interval=interval)
+
+            if chunk is not None and len(chunk) > 0:
+                all_chunks.append(chunk)
+            else:
+                print(f"  ⚠️  لا بيانات للفترة {s} → {e}")
+
+            current = chunk_end + pd.Timedelta(days=1)
+
+        if not all_chunks:
+            print("❌ فشل جلب البيانات الطويلة")
+            return None
+
+        combined = pd.concat(all_chunks)
+        combined = combined[~combined.index.duplicated(keep="last")]
+        combined = combined.sort_index()
+
+        # إعادة حساب المؤشرات على البيانات الكاملة
+        combined["ATR"]    = self._calculate_atr(combined)
+        combined["EMA_20"] = combined["Close"].ewm(span=20, adjust=False).mean()
+        combined["EMA_50"] = combined["Close"].ewm(span=50, adjust=False).mean()
+
+        print(f"✅ إجمالي البيانات: {len(combined)} شمعة ({combined.index[0].date()} → {combined.index[-1].date()})")
+        return combined
+
     def get_latest_price(self):
         """جلب آخر سعر"""
         if self.api_key:

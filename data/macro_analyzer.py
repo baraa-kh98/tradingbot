@@ -7,38 +7,77 @@ class MacroAnalyzer:
 
     def __init__(self, api_key):
         self.client = anthropic.Anthropic(api_key=api_key)
+        self._tracker = None
+
+    def _get_tracker(self):
+        """يُنشئ EconomicTracker عند أول استخدام"""
+        if self._tracker is None:
+            try:
+                from data.economic_tracker import EconomicTracker
+                self._tracker = EconomicTracker()
+            except Exception:
+                self._tracker = None
+        return self._tracker
 
     def get_market_data(self):
-        usdjpy = yf.download("USDJPY=X", period="5d", interval="1d", auto_adjust=True)
-        us10y = yf.download("^TNX", period="5d", interval="1d", auto_adjust=True)
-        jp10y = yf.download("^JGB", period="5d", interval="1d", auto_adjust=True)
-        vix = yf.download("^VIX", period="5d", interval="1d", auto_adjust=True)
-        dxy = yf.download("DX-Y.NYB", period="5d", interval="1d", auto_adjust=True)
+        """يجلب بيانات السوق — يستخدم EconomicTracker إذا أمكن، وإلا yfinance مباشرة"""
+        tracker = self._get_tracker()
+        if tracker:
+            try:
+                snap = tracker.get_full_snapshot()
+                cross = snap.get("cross_asset", {})
+                return {
+                    "USDJPY":    snap.get("japan", {}).get("jp_us_yield_spread", "غير متاح"),
+                    "US10Y":     snap.get("yield_curve", {}).get("US10Y", "غير متاح"),
+                    "VIX":       snap.get("vix", "غير متاح"),
+                    "DXY":       cross.get("DXY", {}).get("price", "غير متاح"),
+                    "FED_RATE":  snap.get("fed_rate", "غير متاح"),
+                    "BOJ_RATE":  snap.get("boj_rate", "غير متاح"),
+                    "CPI_YOY":   snap.get("cpi", {}).get("cpi_yoy", "غير متاح"),
+                    "CURVE":     snap.get("yield_curve", {}).get("curve_shape", "غير متاح"),
+                }
+            except Exception:
+                pass
 
+        # fallback: yfinance مباشرة
         def last_price(df):
             try:
                 return round(float(df["Close"].squeeze().iloc[-1]), 3)
-            except:
+            except Exception:
                 return "غير متاح"
+
+        usdjpy = yf.download("USDJPY=X", period="5d", interval="1d", auto_adjust=True, progress=False)
+        us10y  = yf.download("^TNX",     period="5d", interval="1d", auto_adjust=True, progress=False)
+        vix    = yf.download("^VIX",     period="5d", interval="1d", auto_adjust=True, progress=False)
+        dxy    = yf.download("DX-Y.NYB", period="5d", interval="1d", auto_adjust=True, progress=False)
 
         return {
             "USDJPY": last_price(usdjpy),
-            "US10Y": last_price(us10y),
-            "VIX": last_price(vix),
-            "DXY": last_price(dxy)
+            "US10Y":  last_price(us10y),
+            "VIX":    last_price(vix),
+            "DXY":    last_price(dxy),
         }
 
     def analyze(self):
         data = self.get_market_data()
-        prompt = f"""
-أنت محلل ماكرو اقتصادي متخصص في زوج USDJPY.
-البيانات الحالية:
-- سعر USDJPY: {data['USDJPY']}
-- عائد السندات الأمريكية 10 سنوات: {data['US10Y']}
-- مؤشر VIX الخوف: {data['VIX']}
-- مؤشر الدولار DXY: {data['DXY']}
+        fed  = data.get("FED_RATE", "غير متاح")
+        boj  = data.get("BOJ_RATE", "غير متاح")
+        cpi  = data.get("CPI_YOY", "غير متاح")
+        curve = data.get("CURVE", "غير متاح")
 
-بناءً على هذه البيانات:
+        prompt = f"""
+أنت محلل ماكرو اقتصادي كوانتي متخصص في زوج USDJPY.
+البيانات الحالية:
+- سعر USDJPY: {data.get('USDJPY', 'غير متاح')}
+- عائد السندات الأمريكية 10 سنوات: {data.get('US10Y', 'غير متاح')}
+- مؤشر VIX الخوف: {data.get('VIX', 'غير متاح')}
+- مؤشر الدولار DXY: {data.get('DXY', 'غير متاح')}
+- سعر الفائدة الأمريكي (Fed): {fed}%
+- سعر الفائدة الياباني (BOJ): {boj}%
+- التضخم الأمريكي CPI (سنوي): {cpi}%
+- شكل منحنى العائد: {curve}
+
+بناءً على هذه البيانات الكمية:
 1. حدد اتجاه USDJPY خلال الـ 24 ساعة القادمة
 2. أعط score من -100 إلى +100
 
@@ -62,7 +101,8 @@ REASON: [سبب واحد مختصر]
             if line.startswith("SCORE:"):
                 try:
                     score = int(line.split(":")[1].strip())
-                except: pass
+                except Exception:
+                    pass
             elif line.startswith("BIAS:"):
                 bias = line.split(":")[1].strip()
             elif line.startswith("REASON:"):
@@ -94,17 +134,41 @@ RULES:
    - <h2>Market Narrative & Context</h2> (What likely drove the price action during this chunk based on your economic knowledge of {start_date} to {end_date})
    - <h2>Forecast & Projections</h2> (What do you expect for the next quarter based on this structure and historical context?)
    - <h2>Update to System Memory</h2> (A very short 1-line English summary for me to feed back into your memory log).
-5. Output valid HTML ONLY (inline styling is fine). No markdown wrappers. Make it elegant.
+5. At the very END of your response, after the HTML, add a JSON block like this (outside the HTML):
+   MEMORY_JSON: {{"insights": ["insight1 in English", "insight2 in English", "insight3 in English"]}}
+6. Output valid HTML ONLY for the main report (inline styling is fine). No markdown wrappers. Make it elegant.
 """
         try:
             message = self.client.messages.create(
-                model="claude-3-opus-20240229",
-                max_tokens=1500,
+                model="claude-3-5-sonnet-20240620",
+                max_tokens=1800,
                 messages=[{"role": "user", "content": prompt}]
             )
             return message.content[0].text
         except Exception as e:
             return f"<h3>Error generating report: {e}</h3>"
+
+    def extract_memory_insights(self, html_report: str) -> list:
+        """
+        يستخرج الـ insights من تقرير Claude بشكل موثوق (JSON بدل string parsing).
+        يرجع list of strings.
+        """
+        import json as _json
+        marker = "MEMORY_JSON:"
+        idx = html_report.rfind(marker)
+        if idx == -1:
+            return []
+        try:
+            json_str = html_report[idx + len(marker):].strip()
+            # ابحث عن أول { وآخر }
+            start = json_str.find("{")
+            end   = json_str.rfind("}") + 1
+            if start == -1 or end == 0:
+                return []
+            data = _json.loads(json_str[start:end])
+            return data.get("insights", [])
+        except Exception:
+            return []
 
 if __name__ == "__main__":
     API_KEY = "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"

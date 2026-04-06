@@ -125,9 +125,16 @@ def _run_ict_backtest(data, params):
                         break
 
             if hit_tp or hit_sl:
-                pips = (tp - entry) / pip if hit_tp else -(abs(risk) / pip)
-                if direction == "SELL" and hit_tp:
-                    pips = abs((entry - tp) / pip)
+                if hit_tp:
+                    pips = (tp - entry) / pip if direction == "BUY" else abs((entry - tp) / pip)
+                else:
+                    pips = -(abs(risk) / pip)
+
+                # خصم تكلفة الـ spread (واقعي)
+                spread_pips = params.get("spread_pips", 1.5)
+                slippage_pips = 0.65  # متوسط الانزلاق
+                pips -= (spread_pips + slippage_pips)
+
                 trades.append({"win": hit_tp, "pips": float(pips), "index": i})
                 i += 10
             else:
@@ -174,6 +181,7 @@ class ParameterOptimizer:
         "ob_max_age":       [30, 50, 70],
         "ob_buffer_pips":   [5, 10, 15],
         "min_rr":           [1.5, 2.0, 2.5, 3.0],
+        "spread_pips":      [1.5],   # ثابت للـ USDJPY (لا يُحسّن)
     }
 
     def __init__(self, data):

@@ -17,6 +17,7 @@ MetaTrader5>=5.0.45         # يعمل فقط على Windows
 # الماكرو والتحليل
 anthropic>=0.20             # Claude AI
 requests>=2.31              # HTTP requests (Telegram)
+fredapi>=0.5                # FRED API (Federal Reserve Economic Data)
 
 # Kill Zones
 pytz>=2024.1
