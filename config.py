@@ -147,13 +147,12 @@ MACRO_MIN_SCORE = 20
 # ═══════════════════════════════════════════════════════════════
 
 KILL_ZONES = {
-    "asian":    {"start": "20:00", "end": "00:00"},
-    "london":   {"start": "02:00", "end": "05:00"},
-    "new_york_am": {"start": "07:00", "end": "10:00"},
-    "new_york_pm": {"start": "13:30", "end": "16:00"},
+    "london":      {"start": "07:00", "end": "10:00"},   # UTC — أفضل وقت تداول
+    "new_york_am": {"start": "13:30", "end": "16:00"},   # UTC — فتح نيويورك
+    "new_york_pm": {"start": "19:00", "end": "21:00"},   # UTC — إغلاق نيويورك
 }
 
-KILL_ZONE_FILTER = False
+KILL_ZONE_FILTER = True   # ✅ فعّال — لا نتداول خارج هذه النوافذ
 
 # ═══════════════════════════════════════════════════════════════
 # MT5 Settings
@@ -162,3 +161,26 @@ KILL_ZONE_FILTER = False
 MT5_MAGIC_NUMBER = 123456       # رقم تعريف صفقات البوت
 MT5_DEVIATION = 20              # أقصى انزلاق سعري مسموح (بالنقاط)
 MT5_LOT_MIN = 0.01              # أقل حجم لوت
+
+# ═══════════════════════════════════════════════════════════════
+# Quant Market View (نظام الكوانتم)
+# ═══════════════════════════════════════════════════════════════
+
+# أوزان مكونات MarketViewBuilder (مجموعها = 1.0)
+MARKET_VIEW_WEIGHTS = {
+    "regime":          0.25,   # نظام السوق الكلي
+    "carry":           0.20,   # نموذج الكاري (فارق الفائدة)
+    "momentum":        0.20,   # نموذج الزخم
+    "mean_reversion":  0.10,   # نموذج الارتداد
+    "macro_factor":    0.15,   # نموذج العوامل الاقتصادية
+    "ict_technical":   0.10,   # إشارة ICT التقنية
+}
+
+# الحد الأدنى للـ Conviction للسماح بالتداول
+MIN_CONVICTION_TO_TRADE = "MEDIUM"   # LOW / MEDIUM / HIGH / VERY_HIGH
+
+# هل يجب توافق ICT مع Market View؟
+REQUIRE_VIEW_ALIGNMENT = True
+
+# حجم اللوت الافتراضي في الباكتست
+BACKTEST_DEFAULT_LOT = 0.1

@@ -1,18 +1,22 @@
 """
-ICT Trading Bot — البوت الرئيسي
+London Breakout Trading Bot — البوت الرئيسي
+=============================================
+الاستراتيجية: London Breakout (مثبتة بالباكتست)
+  +17.81% / سنتين | Sharpe 0.97 | Max DD -5.68%
 
-يستخدم:
-- Twelve Data: لجلب البيانات
-- MetaTrader 5: لتنفيذ الصفقات
-- استراتيجية ICT: Market Structure, OB, FVG, Liquidity
-- Claude AI: تحليل ماكرو (اختياري)
-- Telegram: إرسال التقارير والإشعارات
+المنطق:
+  1. احسب Asia Range (00:00-06:59 UTC)
+  2. عند London Open (07:00-09:59 UTC):
+       Break فوق High → BUY | Break تحت Low → SELL
+  3. فلتر H4 Bias + فلتر MarketView (Quant)
+  4. SL = Asia Range الآخر | TP = 3.0 × Risk
+  5. Trailing Stop: Breakeven عند 1:1 + Lock عند 2:1
 """
 
 from data.data_feed import DataFeed
 from data.macro_analyzer import MacroAnalyzer
-from strategy.signal_generator import ICTSignalGenerator
-from strategy.kill_zones import get_current_session
+from strategy.london_signal import LondonSignalGenerator
+from strategy.market_view_builder import MarketViewBuilder
 from risk.risk_manager import RiskManager
 from risk.trade_monitor import TradeMonitor
 from risk.trade_journal import TradeJournal
@@ -28,18 +32,23 @@ from config import (
     BALANCE,
     RISK_PERCENT,
     MIN_RR_RATIO,
-    USE_MACRO_FILTER,
-    MACRO_MIN_SCORE,
     ACTIVE_PAIRS,
     TRADING_PAIRS,
+    REQUIRE_VIEW_ALIGNMENT,
 )
+
+# ── London generators لكل زوج (تُحدَّث في كل دورة) ──
+_london_generators: dict = {}
 
 
 def run_bot():
-    """تشغيل البوت — فحص جميع الأزواج واختيار الأفضل"""
+    """
+    تشغيل البوت — London Breakout Strategy
+    يفحص جميع الأزواج المفعّلة ويدخل عند كسر Range آسيا
+    """
+    global _london_generators
 
     notifier = Notifier(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
-    notifier.send(f"🤖 البوت شغّال — فحص {len(ACTIVE_PAIRS)} أزواج...")
 
     # ═══════════════════════════════════════════════════════════
     # 1. الاتصال بـ MT5
@@ -51,46 +60,106 @@ def run_bot():
         return
 
     account = executor.get_account_info()
-    if account:
-        notifier.send(
-            f"💰 الحساب: {account['login']}\n"
-            f"الرصيد: ${account['balance']:.2f}\n"
-            f"{'🟢 Demo' if account['is_demo'] else '🔴 Real'}"
-        )
+    balance = account["balance"] if account else BALANCE
 
     # ═══════════════════════════════════════════════════════════
-    # 2. ذكاء السوق (أخبار + سنتيمنت)
+    # 2. فحص الظروف العامة (اختياري — لا يوقف البوت)
     # ═══════════════════════════════════════════════════════════
 
-    macro_result = None
     intel = MarketIntelligence()
     try:
-        can_trade, blockers, intel_data = intel.should_trade()
-        notifier.send(intel.get_report())
-
+        can_trade, blockers, _ = intel.should_trade()
         if not can_trade:
-            notifier.send(f"🚫 ظروف غير مناسبة:\n" + "\n".join(blockers))
+            notifier.send(f"🚫 ظروف غير مناسبة للتداول اليوم:\n" + "\n".join(blockers))
             executor.disconnect()
             return
-
-        intel_bias, intel_score, _ = intel.get_usdjpy_bias()
-        macro_result = {"bias": intel_bias, "score": intel_score}
     except Exception as e:
-        print(f"⚠️ خطأ في ذكاء السوق (مكمّلين): {e}")
+        print(f"⚠️ MarketIntelligence: {e} — مكمّلين بدونها")
 
     # ═══════════════════════════════════════════════════════════
-    # 3. فحص جميع الأزواج (Multi-Pair Scanner)
+    # 3. فحص ساعة لندن
     # ═══════════════════════════════════════════════════════════
 
-    from strategy.multi_pair import MultiPairScanner
+    from datetime import datetime, timezone
+    now_utc = datetime.now(timezone.utc)
+    hour    = now_utc.hour
 
-    scanner = MultiPairScanner()
-    scanner.scan_all()
+    if not (7 <= hour < 10):
+        print(f"⏰ ليس وقت لندن (07-10 UTC) — الساعة الحالية: {hour}:00 UTC")
+        executor.disconnect()
+        return
 
-    # إرسال تقرير الفحص
-    notifier.send(scanner.get_report())
+    # ═══════════════════════════════════════════════════════════
+    # 4. جلب البيانات + توليد الإشارات لكل زوج
+    # ═══════════════════════════════════════════════════════════
 
-    # الصفقات المفتوحة حالياً
+    feed = DataFeed()
+    signals_found = []
+
+    for pair in ACTIVE_PAIRS:
+        try:
+            cfg   = TRADING_PAIRS[pair]
+            td_sym = cfg["td"]
+
+            # H1: آخر 200 شمعة (كافية لحساب Asia Range + ATR)
+            h1_feed = DataFeed(td_sym)
+            h1 = h1_feed.get_historical_range(days=8, interval="1h")
+
+            # H4: آخر 120 شمعة (كافية لـ EMA20/50)
+            h4 = h1_feed.get_historical_range(days=30, interval="4h")
+
+            if h1 is None or len(h1) < 20:
+                print(f"  ⚠️ {pair}: بيانات H1 غير كافية")
+                continue
+
+            # أنشئ أو حدّث Generator
+            gen = _london_generators.get(pair)
+            if gen is None:
+                gen = LondonSignalGenerator(pair, h1, h4)
+                _london_generators[pair] = gen
+            else:
+                gen.h1 = h1
+                if h4 is not None:
+                    gen.h4 = h4
+
+            signal = gen.get_signal()
+
+            if signal:
+                signals_found.append((pair, cfg, gen, signal))
+                print(f"  🎯 {pair}: إشارة {signal['direction']} مكتشفة!")
+            else:
+                # أرسل تقرير المراقبة (لكل زوج كل ساعة)
+                print(f"  ⏳ {pair}: {gen.get_session_report()}")
+
+        except Exception as e:
+            print(f"  ❌ {pair}: خطأ — {e}")
+
+    if not signals_found:
+        print("⏳ لا توجد إشارات London Breakout حالياً")
+        executor.disconnect()
+        return
+
+    # ═══════════════════════════════════════════════════════════
+    # 5. النظرة السوقية الكوانتية (MarketViewBuilder)
+    # ═══════════════════════════════════════════════════════════
+
+    market_views = {}
+    try:
+        view_builder = MarketViewBuilder()
+        ict_signals_for_view = {
+            pair: {"bias": sig["direction"], "score": 80}
+            for pair, cfg, gen, sig in signals_found
+        }
+        market_views = view_builder.build_all_views(ict_signals_for_view)
+        notifier.send(view_builder.get_telegram_report(market_views))
+    except Exception as e:
+        print(f"⚠️ MarketViewBuilder: {e}")
+
+    # ═══════════════════════════════════════════════════════════
+    # 6. تنفيذ الإشارات
+    # ═══════════════════════════════════════════════════════════
+
+    rm = RiskManager(balance=balance, risk_percent=RISK_PERCENT)
     open_positions = executor.get_open_positions()
     open_pairs = set()
     for pos in open_positions:
@@ -98,155 +167,113 @@ def run_bot():
             if pcfg["mt5"] in str(getattr(pos, "symbol", "")):
                 open_pairs.add(pname)
 
-    # اختيار أفضل الفرص مع الفلاتر الجديدة
-    opportunities = scanner.get_best_opportunities(open_pairs=open_pairs)
+    for pair, cfg, gen, signal in signals_found:
 
-    if not opportunities:
-        notifier.send("⏳ لا توجد فرص بالتقاء كافي — ننتظر...")
-        executor.disconnect()
-        return
-
-    # ═══════════════════════════════════════════════════════════
-    # 4. تنفيذ الفرص المتاحة بالتتابع
-    # ═══════════════════════════════════════════════════════════
-
-    for best in opportunities:
-        pair_name = best["pair"]
-        pair_config = best["config"]
-        signal = best
-        levels = best["levels"]
-        final_action = best["action"]
-
-        notifier.send(
-            f"🔍 تم اصطياد فرصة جديدة (قيد الفحص الختامي): {pair_name}\n"
-            f"📍 {final_action} | التقاء: {best['score']}/140"
-        )
-
-        if levels is None:
-            notifier.send(f"⚠️ لم يتم تحديد مستويات لـ {pair_name}")
+        # لا تفتح على زوج مفتوح مسبقاً
+        if pair in open_pairs:
+            notifier.send(f"⏩ {pair}: صفقة مفتوحة مسبقاً — يتجاوز")
             continue
 
-        # فلتر الماكرو
-        if macro_result:
-            if macro_result["bias"] == "BULLISH" and final_action == "SELL":
-                if abs(macro_result["score"]) > 50:
-                    notifier.send("⚠️ ICT=SELL لكن ذكاء السوق BULLISH قوي — يتخطى...")
-                    continue
-            elif macro_result["bias"] == "BEARISH" and final_action == "BUY":
-                if abs(macro_result["score"]) > 50:
-                    notifier.send("⚠️ ICT=BUY لكن ذكاء السوق BEARISH قوي — يتخطى...")
-                    continue
+        direction = signal["direction"]
 
-        # ═══════════════════════════════════════════════════════════
-        # 6. إدارة المخاطر المتقدمة
-        # ═══════════════════════════════════════════════════════════
+        # ── فلتر MarketView ────────────────────────────────────
+        view = market_views.get(pair)
+        if view and REQUIRE_VIEW_ALIGNMENT:
+            if not getattr(view, "should_trade", True):
+                notifier.send(
+                    f"⛔ {pair}: محظور بواسطة Market View ({getattr(view, 'no_trade_reason', '')})"
+                )
+                continue
 
-        # استخدام رصيد الحساب الحقيقي إذا متصل
-        balance = account["balance"] if account else BALANCE
-        rm = RiskManager(balance=balance, risk_percent=RISK_PERCENT)
-
-        # فحص الحدود اليومية
-        open_positions = executor.get_open_positions()
+        # ── فحص حدود المخاطرة ─────────────────────────────────
         can_trade, trade_reason = rm.can_trade(len(open_positions))
         if not can_trade:
-            notifier.send(f"{trade_reason}")
-            break  # توقف عن محاولة تنفيذ الصفقات الأخرى
+            notifier.send(trade_reason)
+            break
 
+        # ── حجم اللوت ────────────────────────────────────────
         trade_info = rm.get_trade_info(
-            levels["entry"],
-            levels["stop_loss"],
-            levels["take_profit"]
+            signal["entry"], signal["sl"], signal["tp"]
         )
-
         if not trade_info["trade_valid"]:
             notifier.send(
-                f"⚠️ نسبة الربح/الخسارة ضعيفة لـ {pair_name} ({trade_info['rr_ratio']}) "
-                f"— الحد الأدنى: {MIN_RR_RATIO}"
+                f"⚠️ {pair}: RR = {trade_info.get('rr_ratio', '?')} < {MIN_RR_RATIO} — يتجاوز"
             )
             continue
 
-        # ═══════════════════════════════════════════════════════════
-        # 7. تنفيذ الصفقة على MT5
-        # ═══════════════════════════════════════════════════════════
-
         lots = trade_info["lots"]
+        if view and hasattr(view, "position_size_multiplier"):
+            lots = max(0.01, round(lots * view.position_size_multiplier, 2))
 
-        # TP متعدد
-        tp_info = ""
-        tp_levels = trade_info.get("tp_levels")
-        if tp_levels:
-            tp_info = (
-                f"\n🎯 TP1: {tp_levels['tp1']} ({tp_levels['tp1_rr']}R) — أغلق {int(tp_levels['tp1_close_ratio']*100)}%"
-                f"\n🎯 TP2: {tp_levels['tp2']} ({tp_levels['tp2_rr']}R) — الباقي"
-                f"\n🔒 Break-Even عند 1R"
-                f"\n📈 Trailing Stop بعد 1.5R"
-            )
+        # ── إرسال إشعار التنفيذ ──────────────────────────────
+        view_line = ""
+        if view:
+            view_line = f"\n📊 MarketView: {getattr(view,'recommended_bias','?')} [{getattr(view,'conviction','?')}]"
 
         notifier.send(
-            f"🚀 تنفيذ صفقة ICT على MT5:\n"
+            f"🇬🇧 London Breakout — {pair}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"🌍 الزوج: {pair_name}\n"
-            f"📍 الاتجاه: {final_action}\n"
-            f"💰 الدخول: {levels['entry']}\n"
-            f"🛑 وقف الخسارة: {levels['stop_loss']}\n"
-            f"🎯 هدف الربح: {levels['take_profit']}\n"
-            f"📐 RR: 1:{levels['rr_ratio']}\n"
-            f"📦 الحجم: {lots} lots\n"
-            f"💵 المخاطرة: ${trade_info['risk_amount']}\n"
-            f"🔑 نوع الدخول: {levels['entry_type']}\n"
-            f"📊 الالتقاء: {best['score']}/140"
-            f"{tp_info}"
+            f"📍 الاتجاه : {direction}\n"
+            f"💰 الدخول  : {signal['entry']}\n"
+            f"🛑 وقف الخسارة: {signal['sl']}\n"
+            f"🎯 هدف الربح : {signal['tp']}\n"
+            f"📐 RR     : 1:{signal['rr']}\n"
+            f"📏 Risk   : {signal['risk_pips']} pip\n"
+            f"📦 الحجم  : {lots} lots\n"
+            f"🕛 Asia High: {signal['asia_high']} | Low: {signal['asia_low']}\n"
+            f"📊 H4 Bias: {signal['h4_bias']}"
+            f"{view_line}"
         )
 
+        # ── تنفيذ على MT5 ─────────────────────────────────────
         try:
             result = executor.place_order(
-                signal=final_action,
+                signal=direction,
                 lots=lots,
-                stop_loss=levels["stop_loss"],
-                take_profit=levels["take_profit"],
-                entry_price=levels["entry"],
-                symbol=pair_config["mt5"],
+                stop_loss=signal["sl"],
+                take_profit=signal["tp"],
+                entry_price=signal["entry"],
+                symbol=cfg["mt5"],
             )
 
             if result:
-                order_type = result.get("order_type", "MARKET")
-                order_icon = "🔄" if order_type == "MARKET" else "⏳"
                 notifier.send(
-                    f"✅ تم تنفيذ الصفقة لـ {pair_name}!\n"
-                    f"{order_icon} النوع: {order_type}\n"
-                    f"Ticket: #{result['ticket']}\n"
-                    f"السعر: {result['price']}"
+                    f"✅ تم تنفيذ {pair} {direction}!\n"
+                    f"🎫 Ticket: #{result['ticket']}\n"
+                    f"💹 السعر: {result['price']}\n"
+                    f"🔒 Trailing Stop: يُفعَّل عند 1:1"
                 )
 
-                # تسجيل الصفقة في اليوميات
+                # تسجيل في اليوميات
                 try:
                     journal = TradeJournal()
                     journal.log_trade_open(
                         ticket=result['ticket'],
-                        direction=final_action,
+                        direction=direction,
                         entry=result['price'],
-                        sl=levels['stop_loss'],
-                        tp=levels['take_profit'],
+                        sl=signal['sl'],
+                        tp=signal['tp'],
                         lots=lots,
-                        confluence_score=signal['confluence_score'],
-                        entry_type=levels['entry_type'],
-                        reasons=signal.get('details', []),
-                        session=signal.get('session', ''),
-                        bias=signal.get('bias', ''),
+                        confluence_score=80,
+                        entry_type="London_Breakout",
+                        reasons=[signal['reason']],
+                        session="london",
+                        bias=signal['h4_bias'],
                     )
                 except Exception as je:
                     print(f"⚠️ فشل تسجيل الصفقة: {je}")
+
+                # سجّل في Generator للـ trailing
+                gen.mark_trade_open(direction, result['price'], signal['sl'], signal['tp'])
+                open_pairs.add(pair)
+
             else:
-                sym = executor.get_symbol_info()
-                current = f"Bid:{sym['bid']} Ask:{sym['ask']}" if sym else "?"
                 notifier.send(
-                    f"❌ فشل تنفيذ الصفقة على MT5 لـ {pair_name}\n"
-                    f"📍 السعر الحالي: {current}\n"
-                    f"📦 اللوت: {lots}\n"
-                    f"تحقق من: AutoTrading مفعّل + الرصيد كافي"
+                    f"❌ فشل تنفيذ {pair}\n"
+                    f"تحقق: AutoTrading مفعّل + رصيد كافي"
                 )
         except Exception as e:
-            notifier.send(f"❌ خطأ في التنفيذ لـ {pair_name}: {e}")
+            notifier.send(f"❌ خطأ في تنفيذ {pair}: {e}")
 
     executor.disconnect()
 
@@ -303,14 +330,20 @@ if __name__ == "__main__":
             return f"❌ {e}"
 
     def cmd_analyze(args=None):
+        """تقرير London Breakout لجميع الأزواج"""
         try:
-            f = DataFeed()
-            htf = f.get_htf_data()
-            ltf = f.get_ltf_data()
-            if htf is not None:
-                gen = ICTSignalGenerator(htf, ltf)
-                return gen.get_full_report()
-            return "❌ فشل جلب البيانات"
+            lines = ["🇬🇧 London Breakout — حالة الأزواج\n"]
+            for pair in ACTIVE_PAIRS:
+                cfg  = TRADING_PAIRS[pair]
+                feed = DataFeed(cfg["td"])
+                h1   = feed.get_historical_range(days=8,  interval="1h")
+                h4   = feed.get_historical_range(days=30, interval="4h")
+                if h1 is None or len(h1) < 10:
+                    lines.append(f"❌ {pair}: فشل جلب البيانات")
+                    continue
+                gen = LondonSignalGenerator(pair, h1, h4)
+                lines.append(gen.get_session_report())
+            return "\n\n".join(lines)
         except Exception as e:
             return f"❌ {e}"
 
@@ -361,10 +394,11 @@ if __name__ == "__main__":
     dashboard.start_polling()
 
     dashboard.send(
-        f"🤖 البوت بدأ التشغيل المستمر!\n"
+        f"🤖 London Breakout Bot — شغّال!\n"
+        f"🇬🇧 الاستراتيجية: London Breakout (07-10 UTC)\n"
+        f"📊 الأزواج: {', '.join(ACTIVE_PAIRS)}\n"
         f"⏱️ فحص كل {SCAN_INTERVAL_MINUTES} دقيقة\n"
-        f"📊 الزوج: USDJPY\n"
-        f"🛡️ إدارة مخاطر: Partial TP + Trailing SL\n"
+        f"🛡️ RR = 3:1 | Trailing SL بعد 1:1\n"
         f"📲 لوحة التحكم: /help\n"
         f"💡 لإيقاف البوت: Ctrl+C"
     )
