@@ -16,7 +16,28 @@
       "Bash(/usr/local/bin/python3.14 backtest/london_optimizer.py)",
       "Bash(/usr/local/bin/python3.14 backtest/london_final.py)",
       "Bash(open -a \"Windows App\")",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(chmod +x /Users/baraakhattab/Desktop/tradingbot/run_campaign.sh)",
+      "Bash(python3 backtest/xauusd_backtest.py)",
+      "Bash(source venv/bin/activate)",
+      "Bash(python3 -c 'import pandas')",
+      "Bash(pip3 show:*)",
+      "Bash(pip show:*)",
+      "Bash(python3.11 -c 'import pandas')",
+      "Bash(python3.12 -c 'import pandas')",
+      "Read(//Library/Frameworks/Python.framework/Versions/**)",
+      "Read(//opt/homebrew/**)",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 -c \"import pandas; print\\(''''ok''''\\)\")",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 backtest/xauusd_backtest.py)",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 backtest/gold_research.py)",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 fetch_pair_data.py XAUUSD_M15)",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 -c \":*)",
+      "Bash(python3 -c \":*)",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 backtest/gold_finetune.py)",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 backtest/eurusd_research.py)",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 backtest/eurusd_finetune.py)",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 backtest/gbpusd_research.py)",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 backtest/gbpusd_finetune.py)"
     ]
   }
 }

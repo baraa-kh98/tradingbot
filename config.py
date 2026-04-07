@@ -87,6 +87,14 @@ TRADING_PAIRS = {
 # الأزواج المفعّلة
 ACTIVE_PAIRS = [k for k, v in TRADING_PAIRS.items() if v["enabled"]]
 
+# استراتيجية كل زوج — غيّر هذا السطر لتبديل الاستراتيجية live
+PAIR_STRATEGIES = {
+    "USDJPY": "LondonBreakout",    # ✅ مثبت — لا تغيير
+    "EURUSD": "EURUSDNYBreakout",   # ✅ مثبت — NY Breakout (Sharpe=1.706, Ret=+55%)
+    "GBPUSD": "GBPUSDNYBreakout",   # ✅ مثبت — NY Breakout (Sharpe=1.224, Ret=+19%)
+    "XAUUSD": "GoldATRBreakout",    # ✅ مثبت — ATR Channel Breakout (Sharpe=1.2, Ret=+36%)
+}
+
 # ═══════════════════════════════════════════════════════════════
 # Timeframes (Multi-Timeframe Analysis)
 # ═══════════════════════════════════════════════════════════════

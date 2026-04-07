@@ -15,7 +15,7 @@ London Breakout Trading Bot — البوت الرئيسي
 
 from data.data_feed import DataFeed
 from data.macro_analyzer import MacroAnalyzer
-from strategy.london_signal import LondonSignalGenerator
+from strategy.strategy_router import get_strategy
 from strategy.market_view_builder import MarketViewBuilder
 from risk.risk_manager import RiskManager
 from risk.trade_monitor import TradeMonitor
@@ -37,8 +37,8 @@ from config import (
     REQUIRE_VIEW_ALIGNMENT,
 )
 
-# ── London generators لكل زوج (تُحدَّث في كل دورة) ──
-_london_generators: dict = {}
+# ── Strategy generators لكل زوج (تُحدَّث في كل دورة) ──
+_strategy_generators: dict = {}
 
 
 def run_bot():
@@ -46,7 +46,7 @@ def run_bot():
     تشغيل البوت — London Breakout Strategy
     يفحص جميع الأزواج المفعّلة ويدخل عند كسر Range آسيا
     """
-    global _london_generators
+    global _strategy_generators
 
     notifier = Notifier(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
 
@@ -113,10 +113,10 @@ def run_bot():
                 continue
 
             # أنشئ أو حدّث Generator
-            gen = _london_generators.get(pair)
+            gen = _strategy_generators.get(pair)
             if gen is None:
-                gen = LondonSignalGenerator(pair, h1, h4)
-                _london_generators[pair] = gen
+                gen = get_strategy(pair, h1, h4)
+                _strategy_generators[pair] = gen
             else:
                 gen.h1 = h1
                 if h4 is not None:
@@ -383,6 +383,13 @@ if __name__ == "__main__":
         except Exception as e:
             return f"❌ خطأ في التحسين: {e}"
 
+    def cmd_reload(args=None):
+        """إعادة تحميل الاستراتيجيات من config.py بدون restart"""
+        _strategy_generators.clear()
+        from config import PAIR_STRATEGIES
+        lines = "\n".join([f"  {p}: {s}" for p, s in PAIR_STRATEGIES.items()])
+        return f"✅ تم إعادة تحميل الاستراتيجيات:\n{lines}"
+
     dashboard.register_handler("report", cmd_report)
     dashboard.register_handler("analyze", cmd_analyze)
     dashboard.register_handler("lessons", cmd_lessons)
@@ -390,6 +397,7 @@ if __name__ == "__main__":
     dashboard.register_handler("news", cmd_news)
     dashboard.register_handler("scan", cmd_scan)
     dashboard.register_handler("optimize", cmd_optimize)
+    dashboard.register_handler("reload", cmd_reload)
 
     dashboard.start_polling()
 
