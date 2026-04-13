@@ -103,10 +103,10 @@ def run_bot():
 
             # H1: آخر 200 شمعة (كافية لحساب Asia Range + ATR)
             h1_feed = DataFeed(td_sym)
-            h1 = h1_feed.get_historical_range(days=8, interval="1h")
+            h1 = h1_feed.get_candles(interval="1h", period_days=8)
 
             # H4: آخر 120 شمعة (كافية لـ EMA20/50)
-            h4 = h1_feed.get_historical_range(days=30, interval="4h")
+            h4 = h1_feed.get_candles(interval="4h", period_days=30)
 
             if h1 is None or len(h1) < 20:
                 print(f"  ⚠️ {pair}: بيانات H1 غير كافية")
@@ -336,8 +336,8 @@ if __name__ == "__main__":
             for pair in ACTIVE_PAIRS:
                 cfg  = TRADING_PAIRS[pair]
                 feed = DataFeed(cfg["td"])
-                h1   = feed.get_historical_range(days=8,  interval="1h")
-                h4   = feed.get_historical_range(days=30, interval="4h")
+                h1   = feed.get_candles(interval="1h", period_days=8)
+                h4   = feed.get_candles(interval="4h", period_days=30)
                 if h1 is None or len(h1) < 10:
                     lines.append(f"❌ {pair}: فشل جلب البيانات")
                     continue
