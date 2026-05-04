@@ -13,6 +13,11 @@ London Breakout Trading Bot — البوت الرئيسي
   5. Trailing Stop: Breakeven عند 1:1 + Lock عند 2:1
 """
 
+from utils.logger import get_logger, get_trade_logger
+
+log         = get_logger("main")
+trade_log   = get_trade_logger()
+
 from data.data_feed import DataFeed
 from data.macro_analyzer import MacroAnalyzer
 from strategy.strategy_router import get_strategy
@@ -56,11 +61,13 @@ def run_bot():
 
     executor = Executor()
     if not executor.connect():
+        log.error("فشل الاتصال بـ MT5!")
         notifier.send("❌ فشل الاتصال بـ MT5!")
         return
 
     account = executor.get_account_info()
     balance = account["balance"] if account else BALANCE
+    log.info(f"MT5 متصل | الرصيد: ${balance:,.2f}")
 
     # ═══════════════════════════════════════════════════════════
     # 2. فحص الظروف العامة (اختياري — لا يوقف البوت)
@@ -70,11 +77,12 @@ def run_bot():
     try:
         can_trade, blockers, _ = intel.should_trade()
         if not can_trade:
+            log.warning(f"ظروف غير مناسبة: {blockers}")
             notifier.send(f"🚫 ظروف غير مناسبة للتداول اليوم:\n" + "\n".join(blockers))
             executor.disconnect()
             return
     except Exception as e:
-        print(f"⚠️ MarketIntelligence: {e} — مكمّلين بدونها")
+        log.warning(f"MarketIntelligence: {e} — مكمّلين بدونها")
 
     # ═══════════════════════════════════════════════════════════
     # 3. فحص ساعة لندن
@@ -85,7 +93,7 @@ def run_bot():
     hour    = now_utc.hour
 
     if not (7 <= hour < 10):
-        print(f"⏰ ليس وقت لندن (07-10 UTC) — الساعة الحالية: {hour}:00 UTC")
+        log.info(f"خارج نافذة لندن (07-10 UTC) — الساعة: {hour:02d}:00 UTC")
         executor.disconnect()
         return
 
@@ -109,7 +117,7 @@ def run_bot():
             h4 = h1_feed.get_candles(interval="4h", period_days=30)
 
             if h1 is None or len(h1) < 20:
-                print(f"  ⚠️ {pair}: بيانات H1 غير كافية")
+                log.warning(f"{pair}: بيانات H1 غير كافية")
                 continue
 
             # أنشئ أو حدّث Generator
@@ -126,16 +134,15 @@ def run_bot():
 
             if signal:
                 signals_found.append((pair, cfg, gen, signal))
-                print(f"  🎯 {pair}: إشارة {signal['direction']} مكتشفة!")
+                log.info(f"🎯 {pair}: إشارة {signal['direction']} | entry={signal['entry']} sl={signal['sl']} tp={signal['tp']}")
             else:
-                # أرسل تقرير المراقبة (لكل زوج كل ساعة)
-                print(f"  ⏳ {pair}: {gen.get_session_report()}")
+                log.info(f"{pair}: {gen.get_session_report()}")
 
         except Exception as e:
-            print(f"  ❌ {pair}: خطأ — {e}")
+            log.error(f"{pair}: خطأ في توليد الإشارة — {e}", exc_info=True)
 
     if not signals_found:
-        print("⏳ لا توجد إشارات London Breakout حالياً")
+        log.info("لا توجد إشارات London Breakout حالياً")
         executor.disconnect()
         return
 
@@ -153,7 +160,7 @@ def run_bot():
         market_views = view_builder.build_all_views(ict_signals_for_view)
         notifier.send(view_builder.get_telegram_report(market_views))
     except Exception as e:
-        print(f"⚠️ MarketViewBuilder: {e}")
+        log.warning(f"MarketViewBuilder: {e}")
 
     # ═══════════════════════════════════════════════════════════
     # 6. تنفيذ الإشارات
@@ -227,6 +234,7 @@ def run_bot():
 
         # ── تنفيذ على MT5 ─────────────────────────────────────
         try:
+            log.info(f"{pair}: إرسال أمر {direction} | lots={lots} entry={signal['entry']} sl={signal['sl']} tp={signal['tp']}")
             result = executor.place_order(
                 signal=direction,
                 lots=lots,
@@ -237,6 +245,11 @@ def run_bot():
             )
 
             if result:
+                log.info(f"✅ {pair}: تم تنفيذ #{result['ticket']} @ {result['price']}")
+                trade_log.info(
+                    f"OPEN | {pair} | {direction} | ticket={result['ticket']} | "
+                    f"entry={result['price']} | sl={signal['sl']} | tp={signal['tp']} | lots={lots}"
+                )
                 notifier.send(
                     f"✅ تم تنفيذ {pair} {direction}!\n"
                     f"🎫 Ticket: #{result['ticket']}\n"
@@ -261,18 +274,20 @@ def run_bot():
                         bias=signal['h4_bias'],
                     )
                 except Exception as je:
-                    print(f"⚠️ فشل تسجيل الصفقة: {je}")
+                    log.warning(f"فشل تسجيل الصفقة في Journal: {je}")
 
                 # سجّل في Generator للـ trailing
                 gen.mark_trade_open(direction, result['price'], signal['sl'], signal['tp'])
                 open_pairs.add(pair)
 
             else:
+                log.error(f"{pair}: فشل تنفيذ الأمر — تحقق من AutoTrading والرصيد")
                 notifier.send(
                     f"❌ فشل تنفيذ {pair}\n"
                     f"تحقق: AutoTrading مفعّل + رصيد كافي"
                 )
         except Exception as e:
+            log.error(f"{pair}: خطأ في تنفيذ الأمر — {e}", exc_info=True)
             notifier.send(f"❌ خطأ في تنفيذ {pair}: {e}")
 
     executor.disconnect()
@@ -471,22 +486,22 @@ if __name__ == "__main__":
                 time.sleep(60 * 60)
                 continue
 
-            print(f"\n{'═' * 50}")
-            print(f"   🔄 الدورة #{cycle} — {time.strftime('%Y-%m-%d %H:%M:%S')}")
-            print(f"{'═' * 50}")
+            log.info(f"{'═'*40}")
+            log.info(f"الدورة #{cycle} — {time.strftime('%Y-%m-%d %H:%M:%S')}")
+            log.info(f"{'═'*40}")
 
             # مراقبة الصفقات المفتوحة (كل دورة)
             if executor.connected or executor.connect():
                 mods = monitor.check_and_manage()
                 if mods > 0:
-                    print(f"   📊 تم تعديل {mods} صفقة")
+                    log.info(f"TradeMonitor: تم تعديل {mods} صفقة")
 
                 status = monitor.get_status()
-                print(f"   {status}")
+                log.info(f"TradeMonitor: {status}")
 
             # تحقق من الإيقاف المؤقت
             if bot_state.get("paused"):
-                print(f"   ⏸️ البوت متوقف مؤقتاً (اكتب /resume)")
+                log.info("البوت متوقف مؤقتاً — /resume للاستئناف")
                 time.sleep(30)
                 continue
 
@@ -501,7 +516,7 @@ if __name__ == "__main__":
             time.sleep(SCAN_INTERVAL_MINUTES * 60)
 
         except KeyboardInterrupt:
-            print("\n\n🛑 تم إيقاف البوت يدوياً")
+            log.info("تم إيقاف البوت يدوياً")
             dashboard.send("🛑 تم إيقاف البوت يدوياً")
             dashboard.stop_polling()
             if executor.connected:
@@ -509,6 +524,12 @@ if __name__ == "__main__":
             break
 
         except Exception as e:
-            print(f"\n❌ خطأ غير متوقع: {e}")
-            notifier.send(f"❌ خطأ غير متوقع: {e}\n🔄 إعادة المحاولة بعد دقيقة...")
+            log.error(f"خطأ غير متوقع في الدورة #{cycle}: {e}", exc_info=True)
+            notifier.send(
+                f"🚨 خطأ غير متوقع في البوت!\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"❌ الخطأ: {e}\n"
+                f"🔄 إعادة المحاولة بعد دقيقة...\n"
+                f"📋 راجع: logs/errors_{time.strftime('%Y-%m-%d')}.log"
+            )
             time.sleep(60)

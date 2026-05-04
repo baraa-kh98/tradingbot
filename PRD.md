@@ -1,7 +1,7 @@
 # Trading Bot — PRD (Product Requirements Document)
 
-> **آخر تحديث:** 2026-05-01
-> **الإصدار:** 2.1.0
+> **آخر تحديث:** 2026-05-04
+> **الإصدار:** 2.2.0
 > **الحالة:** تحت التطوير — متوقف مؤقتاً للإصلاح
 
 ---
@@ -18,15 +18,23 @@
 
 ```
 tradingbot/
-├── main.py                  ← نقطة الدخول، الحلقة الرئيسية (515 سطر)
-├── config.py                ← جميع الإعدادات المركزية (195 سطر)
+├── main.py                  ← نقطة الدخول، الحلقة الرئيسية
+├── config.py                ← جميع الإعدادات المركزية
+├── notifier.py              ← Telegram: send/send_error/send_crash/send_startup
+├── run_bot.bat              ← Windows auto-restart ← شغّل هذا على VPS
 ├── PRD.md                   ← هذا الملف
 ├── strategy/                ← توليد الإشارات (19 ملف)
 ├── data/                    ← جلب البيانات والتحليل (8 ملفات)
 ├── execution/               ← الاتصال بـ MT5 وتنفيذ الأوامر
 ├── risk/                    ← إدارة المخاطر ومراقبة الصفقات
 ├── backtest/                ← البحث وتحسين المعاملات (16 ملف)
-├── utils/                   ← أدوات مساعدة
+├── utils/
+│   ├── logger.py            ← نظام logging مركزي (الجديد)
+│   └── email_sender.py
+├── logs/                    ← يُنشأ تلقائياً عند أول تشغيل
+│   ├── bot_YYYY-MM-DD.log   ← كل شي
+│   ├── errors_YYYY-MM-DD.log← الأخطاء فقط
+│   └── trades_YYYY-MM-DD.log← الصفقات فقط
 ├── journal/                 ← نتائج الصفقات والإحصائيات
 └── backtest_data/           ← بيانات OHLCV مخزنة مؤقتاً
 ```
@@ -129,8 +137,11 @@ Telegram notification
 ## 7. أوامر التشغيل
 
 ```bash
-# تشغيل البوت الكامل
+# تشغيل عادي
 python main.py
+
+# تشغيل مع auto-restart (Windows VPS) ← الموصى به
+run_bot.bat
 
 # تشغيل دورة واحدة فقط
 python main.py --once
@@ -184,6 +195,14 @@ python diagnose.py
 ---
 
 ## 10. سجل التعديلات
+
+### v2.2.0 — 2026-05-04 (Logging + Auto-restart)
+- **[NEW]** `utils/logger.py` — نظام logging مركزي مع 3 ملفات يومية (bot / errors / trades)
+- **[NEW]** `logs/` — مجلد يُنشأ تلقائياً لحفظ الـ logs مع rotation 30 يوم
+- **[UPD]** `main.py` — استبدال جميع `print()` الحرجة بـ `logger.info/warning/error`
+- **[UPD]** `main.py` — إشعار Telegram مفصّل عند أي خطأ غير متوقع مع اسم ملف الـ log
+- **[UPD]** `notifier.py` — إعادة كتابة كاملة: `send_error()`, `send_crash()`, `send_startup()`, `send_daily_summary()`
+- **[NEW]** `run_bot.bat` — ملف Windows يعيد تشغيل البوت تلقائياً إذا انهار
 
 ### v2.1.0 — 2026-05-01 (إصلاحات حرجة)
 - **[FIX]** `risk/risk_manager.py:161` — Break-Even SELL كان معكوساً (`entry - offset` → `entry + offset`)
