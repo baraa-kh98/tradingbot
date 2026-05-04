@@ -46,6 +46,102 @@ from config import (
 _strategy_generators: dict = {}
 
 
+# ═══════════════════════════════════════════════════════════════
+# Daily Report — يُحفظ في reports/ ويُرفع لـ GitHub تلقائياً
+# ═══════════════════════════════════════════════════════════════
+
+def save_daily_report(journal, balance: float = 0):
+    """
+    يكتب ملخص يومي في reports/daily_YYYY-MM-DD.md
+    ثم يعمل git commit + push تلقائياً لـ GitHub.
+    """
+    import subprocess, os
+    from datetime import datetime, timezone
+
+    today     = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    report_path = os.path.join("reports", f"daily_{today}.md")
+    log_dir   = "logs"
+    error_log = os.path.join(log_dir, f"errors_{today}.log")
+    trade_log = os.path.join(log_dir, f"trades_{today}.log")
+
+    # ── اقرأ أخطاء اليوم ──────────────────────────────────────
+    errors_content = ""
+    if os.path.exists(error_log):
+        with open(error_log, "r", encoding="utf-8") as f:
+            lines = f.readlines()[-50:]          # آخر 50 سطر
+        errors_content = "".join(lines).strip()
+    else:
+        errors_content = "لا أخطاء اليوم ✅"
+
+    # ── اقرأ صفقات اليوم ──────────────────────────────────────
+    trades_content = ""
+    if os.path.exists(trade_log):
+        with open(trade_log, "r", encoding="utf-8") as f:
+            trades_content = f.read().strip()
+    else:
+        trades_content = "لا صفقات اليوم"
+
+    # ── إحصائيات من الـ Journal ───────────────────────────────
+    stats_section = ""
+    try:
+        stats_section = journal.get_telegram_report()
+    except Exception:
+        stats_section = "تعذّر جلب الإحصائيات"
+
+    # ── اكتب الملف ────────────────────────────────────────────
+    content = f"""# Daily Bot Report — {today}
+
+> **الإصدار:** {open('PRD.md').readline().strip() if os.path.exists('PRD.md') else 'N/A'}
+> **الرصيد:** ${balance:,.2f}
+> **التوقيت:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}
+
+---
+
+## 📊 إحصائيات اليوم
+```
+{stats_section}
+```
+
+---
+
+## 💹 الصفقات المنفّذة
+```
+{trades_content if trades_content else 'لا صفقات اليوم'}
+```
+
+---
+
+## ❌ الأخطاء (آخر 50 سطر)
+```
+{errors_content}
+```
+
+---
+
+## 🗂️ ملاحظات للمراجعة
+- راجع الأخطاء المتكررة وحدّد الأنماط
+- تحقق من نسبة Win Rate اليومية
+- قارن الإشارات مع نتائج الـ backtest
+"""
+
+    os.makedirs("reports", exist_ok=True)
+    with open(report_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    log.info(f"📄 تم حفظ التقرير اليومي: {report_path}")
+
+    # ── ارفع لـ GitHub ─────────────────────────────────────────
+    try:
+        subprocess.run(["git", "add", report_path], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", f"report: daily summary {today}"],
+            check=True, capture_output=True
+        )
+        subprocess.run(["git", "push", "origin", "main"], check=True, capture_output=True)
+        log.info(f"✅ تم رفع التقرير اليومي لـ GitHub")
+    except subprocess.CalledProcessError as e:
+        log.warning(f"تعذّر رفع التقرير لـ GitHub: {e}")
+
+
 def run_bot():
     """
     تشغيل البوت — London Breakout Strategy
@@ -468,6 +564,14 @@ if __name__ == "__main__":
                         notifier.send(f"📅 يوم جديد\n{report}")
                     except Exception:
                         notifier.send("📅 يوم جديد — إعادة تعيين الحدود اليومية")
+
+                    # حفظ ورفع التقرير اليومي لـ GitHub
+                    try:
+                        acct = executor.get_account_info()
+                        bal  = acct["balance"] if acct else BALANCE
+                        save_daily_report(journal, bal)
+                    except Exception as e:
+                        log.warning(f"تعذّر حفظ التقرير اليومي: {e}")
 
                     # تقرير أسبوعي (كل أحد)
                     if today.weekday() == 6 and last_report_day != today:
