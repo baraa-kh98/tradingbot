@@ -38,7 +38,8 @@ class TradeJournal:
             try:
                 with open(TRADES_FILE, "r") as f:
                     return json.load(f)
-            except Exception:
+            except Exception as e:
+                print(f"⚠️ فشل تحميل سجل الصفقات ({TRADES_FILE}): {e}")
                 return []
         return []
 

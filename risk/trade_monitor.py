@@ -42,20 +42,29 @@ class TradeMonitor:
         if self.notifier:
             try:
                 self.notifier.send(msg)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"⚠️ فشل إرسال إشعار Telegram: {e}")
 
-    def get_current_atr(self):
+    # قيم ATR الافتراضية لكل زوج عند فشل جلب البيانات
+    _ATR_DEFAULTS = {
+        "USDJPY": 0.15,
+        "EURUSD": 0.0008,
+        "GBPUSD": 0.0010,
+        "XAUUSD": 3.0,
+    }
+
+    def get_current_atr(self, symbol=None):
         """جلب ATR الحالي"""
+        fallback = self._ATR_DEFAULTS.get(symbol, 0.001) if symbol else 0.001
         try:
             ltf = self.feed.get_candles(interval="15min", period_days=7)
             if ltf is not None and "ATR" in ltf.columns:
                 atr = ltf["ATR"].iloc[-1]
                 if atr and atr > 0:
                     return atr
-        except Exception:
-            pass
-        return 0.15  # default ATR لـ USDJPY
+        except Exception as e:
+            print(f"⚠️ خطأ جلب ATR: {e}")
+        return fallback
 
     def check_and_manage(self):
         """
@@ -67,11 +76,12 @@ class TradeMonitor:
         if not positions:
             return 0
 
-        atr = self.get_current_atr()
         modifications = 0
 
         for pos in positions:
             ticket = pos["ticket"]
+            symbol = pos.get("symbol")
+            atr = self.get_current_atr(symbol)
             direction = pos["type"]
             entry = pos["open_price"]
             current_price = pos["current_price"]

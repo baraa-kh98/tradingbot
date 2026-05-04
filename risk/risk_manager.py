@@ -70,6 +70,8 @@ class RiskManager:
         # لأزواج USD: pip = 0.0001, pip_value_per_lot = 100000 * 0.0001 = $10
         if PIP_VALUE >= 0.01:
             # أزواج الين — القيمة تعتمد على السعر
+            if not entry or entry == 0:
+                return 0.01, risk_amount
             pip_value_per_lot = (100000 * PIP_VALUE) / entry
         else:
             # أزواج الدولار (EURUSD, GBPUSD)
@@ -156,7 +158,7 @@ class RiskManager:
             current_profit = entry - current_price
             trigger = risk * self.breakeven_trigger_rr
             if current_profit >= trigger and stop_loss > entry:
-                new_sl = round(entry - offset, 3)
+                new_sl = round(entry + offset, 3)  # SL فوق entry لحماية صفقة البيع
                 return True, new_sl
 
         return False, stop_loss

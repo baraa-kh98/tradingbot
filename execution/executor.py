@@ -450,6 +450,7 @@ class Executor:
             if pos.magic == MT5_MAGIC_NUMBER:
                 result.append({
                     "ticket": pos.ticket,
+                    "symbol": pos.symbol,
                     "type": "BUY" if pos.type == 0 else "SELL",
                     "volume": pos.volume,
                     "open_price": pos.price_open,
