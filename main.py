@@ -85,17 +85,28 @@ def run_bot():
         log.warning(f"MarketIntelligence: {e} — مكمّلين بدونها")
 
     # ═══════════════════════════════════════════════════════════
-    # 3. فحص ساعة لندن
+    # 3. فحص نوافذ التداول (لندن + نيويورك)
     # ═══════════════════════════════════════════════════════════
 
     from datetime import datetime, timezone
     now_utc = datetime.now(timezone.utc)
     hour    = now_utc.hour
+    minute  = now_utc.minute
 
-    if not (7 <= hour < 10):
-        log.info(f"خارج نافذة لندن (07-10 UTC) — الساعة: {hour:02d}:00 UTC")
+    london    = 7 <= hour < 10                                          # 07:00–10:00 UTC
+    ny_am     = (hour == 13 and minute >= 30) or (14 <= hour < 16)     # 13:30–16:00 UTC
+    ny_pm     = 19 <= hour < 21                                         # 19:00–21:00 UTC
+
+    if not (london or ny_am or ny_pm):
+        log.info(
+            f"خارج جميع نوافذ التداول — {hour:02d}:{minute:02d} UTC | "
+            f"لندن 07-10 | NY 13:30-16 | NY-PM 19-21"
+        )
         executor.disconnect()
         return
+
+    active_session = "london" if london else ("ny_pm" if ny_pm else "ny_am")
+    log.info(f"النافذة النشطة: {active_session} | {hour:02d}:{minute:02d} UTC")
 
     # ═══════════════════════════════════════════════════════════
     # 4. جلب البيانات + توليد الإشارات لكل زوج

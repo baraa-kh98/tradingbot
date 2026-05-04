@@ -114,7 +114,21 @@ class XAUUSDSignalGenerator(BaseStrategy):
         """
         يرجع signal dict أو None.
         يُستدعى في كل دورة من main.py.
+
+        Kill Zones للذهب:
+          - London Open: 07:00–10:00 UTC  (سيولة عالية + تحرك قوي)
+          - NY Open AM:  13:30–16:00 UTC  (أعلى حجم تداول يومي)
         """
+        # ── فلتر الوقت: لندن أو نيويورك فقط ─────────────────
+        from datetime import datetime, timezone
+        _now    = datetime.now(timezone.utc)
+        _hour   = _now.hour
+        _minute = _now.minute
+        _london = 7 <= _hour < 10
+        _ny_am  = (_hour == 13 and _minute >= 30) or (14 <= _hour < 16)
+        if not (_london or _ny_am):
+            return None  # Dead Zone — لا تداول
+
         if self._in_trade:
             return None
 

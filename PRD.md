@@ -1,7 +1,7 @@
 # Trading Bot — PRD (Product Requirements Document)
 
 > **آخر تحديث:** 2026-05-04
-> **الإصدار:** 2.2.0
+> **الإصدار:** 2.3.0
 > **الحالة:** تحت التطوير — متوقف مؤقتاً للإصلاح
 
 ---
@@ -45,10 +45,10 @@ tradingbot/
 
 | الزوج | الاستراتيجية | ملف الإشارة | Sharpe | العائد | Max DD | الحالة |
 |-------|-------------|------------|--------|--------|--------|--------|
-| USDJPY | London Breakout | `strategy/london_signal.py` | 0.97 | +17.81% | -5.68% | ✅ نشط |
-| XAUUSD | ATR Channel Breakout | `strategy/xauusd_signal.py` | 1.20 | +35.97% | -7.33% | ✅ نشط |
-| GBPUSD | NY Breakout | `strategy/gbpusd_signal.py` | 1.22 | +19% | — | ⚠️ مراجعة |
-| EURUSD | NY Breakout | `strategy/eurusd_signal.py` | -0.02 | -0.25% | -5.62% | ❌ خاسرة |
+| USDJPY | London Breakout | `strategy/london_signal.py` | 0.97 | +17.81% | -5.68% | ✅ نشط — 07:00-10:00 UTC |
+| XAUUSD | ATR Channel Breakout | `strategy/xauusd_signal.py` | 1.20 | +35.97% | -7.33% | ✅ نشط — 07:00-10:00 + 13:30-16:00 UTC |
+| GBPUSD | NY Breakout | `strategy/gbpusd_signal.py` | 1.22 | +19% | — | ⚠️ مراجعة — 13:30-16:00 UTC |
+| EURUSD | NY Breakout | `strategy/eurusd_signal.py` | -0.02 | -0.25% | -5.62% | ❌ خاسرة — معطّل مؤقتاً |
 
 ### London Breakout (USDJPY) — المنطق
 ```
@@ -195,6 +195,12 @@ python diagnose.py
 ---
 
 ## 10. سجل التعديلات
+
+### v2.3.0 — 2026-05-04 (Kill Zones للذهب + Global Gate)
+- **[FIX]** `main.py` — إصلاح Global Time Gate: كان يسمح فقط لندن (07-10 UTC)، الآن يشمل NY AM (13:30-16) وNY PM (19-21 UTC)
+- **[FIX]** `strategy/xauusd_signal.py` — إضافة Kill Zone فلتر: الذهب الآن يتداول فقط في لندن (07-10) أو NY AM (13:30-16) وليس في Dead Zone
+- **[FIX]** `data/economic_tracker.py` — حذف `^JGB` غير الموجود على yfinance، استبدال بقيمة محسوبة
+- **[FIX]** `data/macro_data.py` — تحذير FRED API Key يظهر مرة واحدة بدل 10+ مرات
 
 ### v2.2.0 — 2026-05-04 (Logging + Auto-restart)
 - **[NEW]** `utils/logger.py` — نظام logging مركزي مع 3 ملفات يومية (bot / errors / trades)
