@@ -54,6 +54,8 @@ FRED_SERIES = {
 class MacroData:
     """جلب وتحليل بيانات ماكرو تاريخية من FRED"""
 
+    _fred_key_warned = False  # يطبع التحذير مرة واحدة فقط
+
     def __init__(self, api_key=None):
         self.api_key = api_key or FRED_API_KEY
         self.base_url = "https://api.stlouisfed.org/fred"
@@ -72,7 +74,9 @@ class MacroData:
             return self._cache[cache_key]
 
         if not self.api_key or self.api_key == "your_fred_api_key_here":
-            print(f"⚠️ FRED API Key مش محطوط — يستخدم yfinance fallback")
+            if not MacroData._fred_key_warned:
+                MacroData._fred_key_warned = True
+                print("⚠️ FRED API Key مش محطوط — يستخدم yfinance fallback (تحذير مرة واحدة)")
             return self._fallback_yfinance(series_id, start_date, end_date)
 
         if start_date is None:

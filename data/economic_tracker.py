@@ -52,7 +52,7 @@ YFINANCE_ASSETS = {
     "OIL":   "CL=F",
     "SP500": "^GSPC",
     "US10Y_LIVE": "^TNX",
-    "JP10Y": "^JGB",
+    # ^JGB غير متاح على yfinance — نستخدم قيمة افتراضية في get_japan_data()
 }
 
 # جدول قرارات BOJ التاريخية (rate %)
@@ -333,14 +333,9 @@ class EconomicTracker:
             return cached
 
         boj_rate = self.get_boj_rate()
-        jp10y = 0.9
-
-        try:
-            df = yf.download("^JGB", period="5d", progress=False, auto_adjust=True)
-            if not df.empty:
-                jp10y = round(float(df["Close"].iloc[-1]), 3)
-        except Exception:
-            pass
+        # عائد السندات اليابانية 10 سنوات — ^JGB غير موجود على yfinance
+        # نستخدم قيمة تقديرية بناءً على سياسة BOJ (حول 1.5% عام 2025-2026)
+        jp10y = round(boj_rate + 1.0, 3) if boj_rate else 1.5
 
         us10y = self.get_yield_curve().get("US10Y", 4.3)
         jp_us_spread = round(us10y - jp10y, 3)
