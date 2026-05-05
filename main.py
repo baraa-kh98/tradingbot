@@ -546,6 +546,7 @@ if __name__ == "__main__":
     last_day = None
     last_report_day = None
     last_vision_day = None
+    last_heartbeat_hour = -1   # لمنع إرسال heartbeat مرتين في نفس الساعة
 
     while True:
         cycle += 1
@@ -594,6 +595,33 @@ if __name__ == "__main__":
                         notifier.send("📧 تم إعداد وتوليد الرؤية الاقتصادية الصباحية بنجاح وإرسالها لإيميلك!")
                 except Exception as vi_err:
                     print(f"⚠️ خطأ في توليد رؤية الإيميل: {vi_err}")
+
+            # ═══ Heartbeat — إشعار "البوت حي" كل 4 ساعات ═══
+            _now_h = datetime.now().hour
+            _heartbeat_hours = {0, 4, 8, 12, 16, 20}   # كل 4 ساعات
+            if _now_h in _heartbeat_hours and _now_h != last_heartbeat_hour:
+                last_heartbeat_hour = _now_h
+                from datetime import timezone as _tz
+                _utc_h = datetime.now(_tz.utc).hour
+                _in_window = (
+                    7 <= _utc_h < 10 or
+                    (_utc_h == 13) or (14 <= _utc_h < 16) or
+                    (19 <= _utc_h < 21)
+                )
+                _window_str = "🟢 في نافذة تداول" if _in_window else "🔵 Dead Zone — ينتظر"
+                try:
+                    acct_hb = executor.get_account_info()
+                    bal_hb  = f"${acct_hb['balance']:,.2f}" if acct_hb else "N/A"
+                except Exception:
+                    bal_hb  = "N/A"
+                notifier.send(
+                    f"💓 البوت شغال\n"
+                    f"━━━━━━━━━━━━━━━━━━\n"
+                    f"🕐 {time.strftime('%H:%M')} VPS | UTC {_utc_h:02d}:xx\n"
+                    f"💰 الرصيد: {bal_hb}\n"
+                    f"📊 الدورة: #{cycle}\n"
+                    f"{_window_str}"
+                )
 
             if not is_market_open():
                 print(f"\n⏸️ [{time.strftime('%H:%M')}] السوق مغلق (عطلة نهاية الأسبوع)")
