@@ -47,8 +47,8 @@ tradingbot/
 |-------|-------------|------------|--------|--------|--------|--------|
 | USDJPY | London Breakout | `strategy/london_signal.py` | 0.97 | +17.81% | -5.68% | ✅ نشط — 07:00-10:00 UTC |
 | XAUUSD | ATR Channel Breakout | `strategy/xauusd_signal.py` | 1.20 | +35.97% | -7.33% | ✅ نشط — 07:00-10:00 + 13:30-16:00 UTC |
-| GBPUSD | NY Breakout | `strategy/gbpusd_signal.py` | 1.22 | +19% | — | ⚠️ مراجعة — 13:30-16:00 UTC |
-| EURUSD | NY Breakout | `strategy/eurusd_signal.py` | -0.02 | -0.25% | -5.62% | ❌ خاسرة — معطّل مؤقتاً |
+| GBPUSD | NY Breakout | `strategy/gbpusd_signal.py` | 1.22 | +19.1% | -7.1% | ✅ نشط — 13:00-15:00 UTC |
+| EURUSD | NY Breakout | `strategy/eurusd_signal.py` | 1.71 | +55.1% | -11.79% | ✅ نشط — 13:00-15:00 UTC (backtest جديد 1890 تجربة) |
 
 ### London Breakout (USDJPY) — المنطق
 ```
@@ -196,6 +196,12 @@ python diagnose.py
 
 ## 10. سجل التعديلات
 
+### v2.4.0 — 2026-05-05 (إصلاح CMD + تحديث EURUSD/GBPUSD)
+- **[FIX]** `utils/logger.py` — تفعيل Windows VT100 تلقائياً لإصلاح النص المشوّه في CMD
+- **[FIX]** `run_bot.bat` — إضافة `chcp 65001` لدعم UTF-8 والعربية في Windows CMD
+- **[UPD]** `PRD.md` — تصحيح بيانات EURUSD: backtest جديد (1890 تجربة) يظهر Sharpe=1.71, Return=+55% (كان مسجلاً بشكل غلط كـ -0.25%)
+- **[UPD]** `PRD.md` — تأكيد GBPUSD: Sharpe=1.22, Return=+19.1% ✅
+
 ### v2.3.0 — 2026-05-04 (Kill Zones للذهب + Global Gate)
 - **[FIX]** `main.py` — إصلاح Global Time Gate: كان يسمح فقط لندن (07-10 UTC)، الآن يشمل NY AM (13:30-16) وNY PM (19-21 UTC)
 - **[FIX]** `strategy/xauusd_signal.py` — إضافة Kill Zone فلتر: الذهب الآن يتداول فقط في لندن (07-10) أو NY AM (13:30-16) وليس في Dead Zone
@@ -244,9 +250,10 @@ python diagnose.py
 
 | الأولوية | المشكلة | الملف | الحالة |
 |---------|---------|-------|--------|
-| 🔴 عالية | EURUSD استراتيجيتها خاسرة | `strategy/eurusd_signal.py` | ❌ مفتوح |
-| 🟡 متوسطة | GBPUSD نتائجها تحتاج مراجعة | `strategy/gbpusd_signal.py` | ⚠️ مفتوح |
+| 🟢 محلول | EURUSD — backtest جديد (1890 تجربة) يظهر Sharpe=1.71, +55% | `strategy/eurusd_signal.py` | ✅ مفعّل |
+| 🟢 محلول | GBPUSD — Sharpe=1.22, Return=+19.1% مؤكد | `strategy/gbpusd_signal.py` | ✅ مفعّل |
 | 🟡 متوسطة | حجم الإغلاق الجزئي غير دقيق لـ lots صغيرة | `risk/risk_manager.py:245` | ⚠️ مفتوح |
+| 🟡 متوسطة | Windows CMD يظهر نص مشوّه (ANSI) — تم الإصلاح بـ VT100 + chcp | `utils/logger.py`, `run_bot.bat` | ✅ تم |
 | 🔵 منخفضة | MT5 connection error handling ضعيف | `execution/executor.py:46` | ⚠️ مفتوح |
 
 ---

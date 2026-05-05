@@ -72,11 +72,28 @@ def _get_file_handler(filename: str, level: int) -> TimedRotatingFileHandler:
 _initialized = False
 
 
+def _enable_windows_ansi():
+    """تفعيل ANSI colors في Windows CMD/PowerShell"""
+    import sys
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        # ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+    except Exception:
+        pass  # إذا فشل، الألوان ستظهر كـ escape codes بدون مشاكل في الملفات
+
+
 def _setup_root_logger():
     global _initialized
     if _initialized:
         return
     _initialized = True
+
+    # تفعيل ANSI على Windows أولاً
+    _enable_windows_ansi()
 
     root = logging.getLogger("tradingbot")
     root.setLevel(logging.DEBUG)

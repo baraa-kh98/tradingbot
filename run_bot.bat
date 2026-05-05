@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 > nul
 title Trading Bot — Auto Restart
 color 0A
 
