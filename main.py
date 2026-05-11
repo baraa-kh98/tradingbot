@@ -652,6 +652,9 @@ if __name__ == "__main__":
                 except Exception as vi_err:
                     print(f"⚠️ خطأ في توليد رؤية الإيميل: {vi_err}")
 
+            # ساعة الوقت الحالي — تُستخدم في log push + heartbeat
+            _now_h = datetime.now().hour
+
             # ═══ رفع الـ logs لـ GitHub كل 6 ساعات ═══
             _log_push_hours = {0, 6, 12, 18}
             if _now_h in _log_push_hours and _now_h != last_log_push_hour:
@@ -662,7 +665,6 @@ if __name__ == "__main__":
                     log.warning(f"push_logs خطأ: {_e}")
 
             # ═══ Heartbeat — إشعار "البوت حي" كل 4 ساعات ═══
-            _now_h = datetime.now().hour
             _heartbeat_hours = {0, 4, 8, 12, 16, 20}   # كل 4 ساعات
             if _now_h in _heartbeat_hours and _now_h != last_heartbeat_hour:
                 last_heartbeat_hour = _now_h
