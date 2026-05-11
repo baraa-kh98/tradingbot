@@ -142,6 +142,61 @@ def save_daily_report(journal, balance: float = 0):
         log.warning(f"تعذّر رفع التقرير لـ GitHub: {e}")
 
 
+def push_logs_to_github():
+    """
+    يرفع ملفات الـ log الحالية لـ GitHub كل 6 ساعات
+    حتى يقدر الروتين اليومي يقرأها ويحلّلها.
+
+    يرفع:
+      logs/bot_YYYY-MM-DD.log     ← كل الأحداث
+      logs/errors_YYYY-MM-DD.log  ← الأخطاء فقط
+      logs/trades_YYYY-MM-DD.log  ← الصفقات
+    """
+    import subprocess, os
+    from datetime import datetime, timezone
+
+    today   = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    log_dir = "logs"
+
+    if not os.path.exists(log_dir):
+        return
+
+    # اجمع ملفات اليوم الموجودة
+    files_to_push = []
+    for prefix in ("bot_", "errors_", "trades_"):
+        path = os.path.join(log_dir, f"{prefix}{today}.log")
+        if os.path.exists(path) and os.path.getsize(path) > 0:
+            files_to_push.append(path)
+
+    if not files_to_push:
+        log.info("push_logs: لا ملفات لرفعها")
+        return
+
+    try:
+        subprocess.run(["git", "add"] + files_to_push,
+                       check=True, capture_output=True)
+
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--quiet"],
+            capture_output=True
+        )
+        if result.returncode == 0:
+            log.info("push_logs: لا تغييرات جديدة في الـ logs")
+            return
+
+        ts = datetime.now(timezone.utc).strftime("%H:%M UTC")
+        subprocess.run(
+            ["git", "commit", "-m", f"logs: auto-push {today} @ {ts}"],
+            check=True, capture_output=True
+        )
+        subprocess.run(["git", "push", "origin", "main"],
+                       check=True, capture_output=True)
+        log.info(f"✅ تم رفع {len(files_to_push)} ملف log لـ GitHub")
+
+    except subprocess.CalledProcessError as e:
+        log.warning(f"push_logs: فشل الرفع — {e}")
+
+
 def run_bot():
     """
     تشغيل البوت — London Breakout Strategy
@@ -547,6 +602,7 @@ if __name__ == "__main__":
     last_report_day = None
     last_vision_day = None
     last_heartbeat_hour = -1   # لمنع إرسال heartbeat مرتين في نفس الساعة
+    last_log_push_hour = -1    # لمنع رفع الـ logs مرتين في نفس الساعة
 
     while True:
         cycle += 1
@@ -595,6 +651,15 @@ if __name__ == "__main__":
                         notifier.send("📧 تم إعداد وتوليد الرؤية الاقتصادية الصباحية بنجاح وإرسالها لإيميلك!")
                 except Exception as vi_err:
                     print(f"⚠️ خطأ في توليد رؤية الإيميل: {vi_err}")
+
+            # ═══ رفع الـ logs لـ GitHub كل 6 ساعات ═══
+            _log_push_hours = {0, 6, 12, 18}
+            if _now_h in _log_push_hours and _now_h != last_log_push_hour:
+                last_log_push_hour = _now_h
+                try:
+                    push_logs_to_github()
+                except Exception as _e:
+                    log.warning(f"push_logs خطأ: {_e}")
 
             # ═══ Heartbeat — إشعار "البوت حي" كل 4 ساعات ═══
             _now_h = datetime.now().hour
