@@ -66,15 +66,19 @@ class GBPUSDSignalGenerator(BaseStrategy):
         """
         يحسب High/Low لجلسة لندن (07:00–13:00 UTC) لليوم الحالي.
         يرجع (range_high, range_low, range_pips) أو (None, None, 0)
+        الـ datetime هو index الـ DataFrame (مش column)
         """
         try:
-            last_dt = self.h1["datetime"].iloc[-1] if "datetime" in self.h1.columns else None
-            if last_dt is None:
-                return None, None, 0
-            day   = last_dt.normalize() if hasattr(last_dt, 'normalize') else pd.Timestamp(last_dt.date())
+            idx = pd.DatetimeIndex(self.h1.index)
+            last_dt = idx[-1]
+            if last_dt.tzinfo is None:
+                last_dt = last_dt.tz_localize("UTC")
+
+            day   = last_dt.normalize()
             start = day + pd.Timedelta(hours=self.RANGE_START_H)
             end   = day + pd.Timedelta(hours=self.RANGE_END_H)
-            mask  = (self.h1["datetime"] >= start) & (self.h1["datetime"] < end)
+
+            mask  = (idx >= start) & (idx < end)
             pre   = self.h1[mask]
             if len(pre) < 2:
                 return None, None, 0
@@ -86,10 +90,13 @@ class GBPUSDSignalGenerator(BaseStrategy):
             return None, None, 0
 
     def _current_hour(self) -> int:
+        """ساعة آخر شمعة (UTC) من الـ index"""
         try:
-            if "datetime" in self.h1.columns:
-                return self.h1["datetime"].iloc[-1].hour
-            return -1
+            idx = pd.DatetimeIndex(self.h1.index)
+            last = idx[-1]
+            if last.tzinfo is None:
+                last = last.tz_localize("UTC")
+            return last.hour
         except Exception:
             return -1
 
