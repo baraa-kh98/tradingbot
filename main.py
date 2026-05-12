@@ -13,6 +13,8 @@ London Breakout Trading Bot — البوت الرئيسي
   5. Trailing Stop: Breakeven عند 1:1 + Lock عند 2:1
 """
 
+import os
+
 from utils.logger import get_logger, get_trade_logger
 
 log         = get_logger("main")
@@ -603,6 +605,7 @@ if __name__ == "__main__":
     last_vision_day = None
     last_heartbeat_hour = -1   # لمنع إرسال heartbeat مرتين في نفس الساعة
     last_log_push_hour = -1    # لمنع رفع الـ logs مرتين في نفس الساعة
+    last_fix_plan_day  = None  # لمنع إرسال خطة الإصلاح مرتين في نفس اليوم
 
     while True:
         cycle += 1
@@ -663,6 +666,50 @@ if __name__ == "__main__":
                     push_logs_to_github()
                 except Exception as _e:
                     log.warning(f"push_logs خطأ: {_e}")
+
+            # ═══ خطة الإصلاح — إرسال تلقائي الساعة 07:00 UTC ═══
+            from datetime import timezone as _tz_fix
+            _utc_now   = datetime.now(_tz_fix.utc)
+            _utc_h_fix = _utc_now.hour
+            _today_fix = _utc_now.date()
+
+            if _utc_h_fix == 7 and last_fix_plan_day != _today_fix:
+                last_fix_plan_day = _today_fix
+                try:
+                    import subprocess as _sp
+                    # سحب آخر تحديثات (قد تشمل fix_plan من الروتين)
+                    _pull = _sp.run(
+                        ["git", "pull", "origin", "main"],
+                        capture_output=True, text=True, timeout=30
+                    )
+                    if _pull.returncode == 0 and "Already up to date" not in _pull.stdout:
+                        log.info("✅ git pull نجح — يبحث عن خطة إصلاح جديدة")
+
+                    # ابحث عن fix_plan اليوم
+                    _plan_path = os.path.join(
+                        "reports", f"fix_plan_{_today_fix.strftime('%Y-%m-%d')}.md"
+                    )
+                    # إذا ما وجد اليوم، خذ أحدث خطة
+                    if not os.path.exists(_plan_path):
+                        _all_plans = sorted([
+                            f for f in os.listdir("reports")
+                            if f.startswith("fix_plan_") and f.endswith(".md")
+                        ], reverse=True) if os.path.exists("reports") else []
+                        if _all_plans:
+                            _plan_path = os.path.join("reports", _all_plans[0])
+                        else:
+                            _plan_path = None
+
+                    if _plan_path and os.path.exists(_plan_path):
+                        with open(_plan_path, "r", encoding="utf-8") as _pf:
+                            _plan_content = _pf.read()
+                        log.info(f"📋 إرسال خطة الإصلاح: {_plan_path}")
+                        dashboard.activate_fix_plan(_plan_content)
+                    else:
+                        log.info("📋 لا توجد خطة إصلاح لإرسالها اليوم")
+
+                except Exception as _fe:
+                    log.warning(f"خطأ في إرسال خطة الإصلاح: {_fe}")
 
             # ═══ Heartbeat — إشعار "البوت حي" كل 4 ساعات ═══
             _heartbeat_hours = {0, 4, 8, 12, 16, 20}   # كل 4 ساعات
