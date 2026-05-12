@@ -30,3 +30,26 @@
 - GBPUSD NY Breakout: Sharpe=1.224 | Return=+19.1% (backtest) — بدأ يعمل فعلياً بعد إصلاح 2026-05-12
 
 ---
+## يوم 2026-05-12 — الروتين اليومي الصباحي (07:52 UTC)
+
+### 🔍 مشاكل وجدناها
+1. **حرجة:** `main.py:394` — `signal['asia_high']` يرمي `KeyError` لأزواج EURUSD/GBPUSD/XAUUSD → يمنع تنفيذ 3 من 4 استراتيجيات نشطة
+2. **حرجة:** `main.py:523` — `LondonSignalGenerator` غير مستورد في `cmd_analyze` → `/analyze` يرمي NameError دائماً
+3. **متوسطة:** `risk/trade_monitor.py:41,46,66` — يستخدم `print()` بدل `logger.error()` → الأخطاء لا تُكتب في `errors_*.log`
+4. **ملاحظة:** `open_suggestions.md` كانت تسرد مشاكل قديمة مُصلحة مسبقاً (Break-Even SELL, div/0, ATR defaults) — تم تنظيفها
+
+### ✅ إصلاحات طُبّقت تلقائياً
+1. `main.py:384-397` — استبدال `signal['asia_high']` بـ `signal.get('asia_high')` مع conditional line
+2. `main.py:523` — `LondonSignalGenerator(pair,h1,h4)` → `get_strategy(pair,h1,h4)`
+3. `risk/trade_monitor.py:12-13,41,46,66` — إضافة `get_logger("trade_monitor")` واستبدال `print()` بـ `_log.info/error()`
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **منخفضة:** إضافة `"strategy"` key لكل Signal Generator للـ label في Telegram
+2. **منخفضة:** إصلاح دقة partial lots — `math.floor()` بدل `round()`
+3. **منخفضة:** تحسين MT5 connection error handling في `execution/executor.py:46`
+
+### 📊 أداء اليوم
+- صفقات: 0 (يوم الإعداد) | Win Rate: N/A | P&L: $0
+- تأثير الإصلاحات: EURUSD/GBPUSD/XAUUSD قادرة على التنفيذ الكامل الآن للمرة الأولى
+
+---

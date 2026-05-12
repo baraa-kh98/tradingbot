@@ -15,6 +15,9 @@ from config import (
     TELEGRAM_CHAT_ID,
     PIP_VALUE,
 )
+from utils.logger import get_logger
+
+_log = get_logger("trade_monitor")
 
 
 class TradeMonitor:
@@ -38,12 +41,12 @@ class TradeMonitor:
 
     def notify(self, msg):
         """إرسال إشعار"""
-        print(msg)
+        _log.info(msg)
         if self.notifier:
             try:
                 self.notifier.send(msg)
             except Exception as e:
-                print(f"⚠️ فشل إرسال إشعار Telegram: {e}")
+                _log.error(f"فشل إرسال إشعار Telegram: {e}")
 
     # قيم ATR الافتراضية لكل زوج عند فشل جلب البيانات
     _ATR_DEFAULTS = {
@@ -63,7 +66,7 @@ class TradeMonitor:
                 if atr and atr > 0:
                     return atr
         except Exception as e:
-            print(f"⚠️ خطأ جلب ATR: {e}")
+            _log.error(f"خطأ جلب ATR لـ {symbol}: {e}")
         return fallback
 
     def check_and_manage(self):

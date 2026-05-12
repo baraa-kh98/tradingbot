@@ -381,8 +381,12 @@ def run_bot():
         if view:
             view_line = f"\n📊 MarketView: {getattr(view,'recommended_bias','?')} [{getattr(view,'conviction','?')}]"
 
+        _strategy_label = signal.get("strategy", "Breakout")
+        _asia_line = ""
+        if signal.get("asia_high") is not None:
+            _asia_line = f"\n🕛 Asia High: {signal['asia_high']} | Low: {signal['asia_low']}"
         notifier.send(
-            f"🇬🇧 London Breakout — {pair}\n"
+            f"📡 {_strategy_label} — {pair}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"📍 الاتجاه : {direction}\n"
             f"💰 الدخول  : {signal['entry']}\n"
@@ -390,8 +394,8 @@ def run_bot():
             f"🎯 هدف الربح : {signal['tp']}\n"
             f"📐 RR     : 1:{signal['rr']}\n"
             f"📏 Risk   : {signal['risk_pips']} pip\n"
-            f"📦 الحجم  : {lots} lots\n"
-            f"🕛 Asia High: {signal['asia_high']} | Low: {signal['asia_low']}\n"
+            f"📦 الحجم  : {lots} lots"
+            f"{_asia_line}\n"
             f"📊 H4 Bias: {signal['h4_bias']}"
             f"{view_line}"
         )
@@ -520,7 +524,7 @@ if __name__ == "__main__":
                 if h1 is None or len(h1) < 10:
                     lines.append(f"❌ {pair}: فشل جلب البيانات")
                     continue
-                gen = LondonSignalGenerator(pair, h1, h4)
+                gen = get_strategy(pair, h1, h4)
                 lines.append(gen.get_session_report())
             return "\n\n".join(lines)
         except Exception as e:
