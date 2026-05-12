@@ -185,11 +185,13 @@ class TelegramDashboard:
         return self._cb_skip_plan()
 
     def _cb_approve_plan(self):
-        """تنفيذ git pull لتطبيق الإصلاحات"""
+        """تنفيذ git pull لتطبيق الإصلاحات وتسجيل الموافقة في development_log"""
         self._plan_active = False
         self._chat_history = []
 
         import subprocess
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
         try:
             result = subprocess.run(
                 ["git", "pull", "origin", "main"],
@@ -197,7 +199,22 @@ class TelegramDashboard:
                 encoding="utf-8"
             )
             if result.returncode == 0:
-                output = result.stdout.strip()[-600:] if result.stdout else "لا مخرجات"
+                output = result.stdout.strip()[-600:] if result.stdout else "Already up to date."
+
+                # سجّل الموافقة في development_log.md
+                try:
+                    log_path = os.path.join("memory", "development_log.md")
+                    os.makedirs("memory", exist_ok=True)
+                    with open(log_path, "a", encoding="utf-8") as f:
+                        f.write(
+                            f"\n### ✅ موافقة على الخطة — {now_str}\n"
+                            f"- git pull نجح\n"
+                            f"- التفاصيل: `{output[:200]}`\n"
+                            f"- ⚠️ يحتاج إعادة تشغيل البوت لتفعيل التغييرات\n"
+                        )
+                except Exception:
+                    pass
+
                 return (
                     "✅ <b>تم سحب الإصلاحات بنجاح!</b>\n\n"
                     f"<code>{output}</code>\n\n"
