@@ -1,6 +1,6 @@
 # اقتراحات مفتوحة — قيد الدراسة
 
-> آخر تحديث: 2026-05-12 (روتين صباحي)
+> آخر تحديث: 2026-05-13 (روتين صباحي)
 
 ---
 
@@ -41,6 +41,16 @@
 
 ---
 
+### [5] _now_h يستخدم local time بدل UTC — heartbeat وlog push
+- **الملف:** `main.py` السطر 663
+- **المشكلة:** `_now_h = datetime.now().hour` — local time. الـ heartbeat ({0,4,8,12,16,20}) وعمليات رفع الـ logs ({0,6,12,18}) تُشغَّل بناءً على local hour. إذا كان VPS بتوقيت غير UTC، المواعيد ستكون خاطئة.
+- **الإصلاح:** `_now_h = datetime.now(timezone.utc).hour`
+- **التأثير:** دقة heartbeat وlog push
+- **تاريخ الاكتشاف:** 2026-05-12 (إعادة تسجيل 2026-05-13)
+- **الحالة:** ⏳ ينتظر تأكيد `timedatectl` أو `date +%Z` على VPS
+
+---
+
 ## ✅ مكتملة (للمرجع)
 
 ### [E1] datetime index vs column — EURUSD/GBPUSD
@@ -70,3 +80,11 @@
 ### [E7] print() في trade_monitor — الأخطاء لا تُسجَّل
 - **طُبّق:** 2026-05-12 (روتين صباحي)
 - **النتيجة:** إضافة `get_logger` واستبدال print → logger في trade_monitor.py ✅
+
+### [E8] print() في main.py — خطأ AI Vision + رسائل market closed/scan
+- **طُبّق:** 2026-05-13 (روتين صباحي)
+- **النتيجة:** 4 print() محوّلة → log.warning()/log.info() ✅
+
+### [E9] journal=None guard قبل start_polling()
+- **طُبّق:** 2026-05-13 (روتين صباحي)
+- **النتيجة:** `journal = None` و`optimizer_self = None` أُضيفا قبل `start_polling()` — يمنع NameError في أوامر Telegram المبكرة ✅

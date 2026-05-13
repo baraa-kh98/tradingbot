@@ -53,3 +53,28 @@
 - تأثير الإصلاحات: EURUSD/GBPUSD/XAUUSD قادرة على التنفيذ الكامل الآن للمرة الأولى
 
 ---
+## يوم 2026-05-13 — الروتين اليومي الصباحي (05:39 UTC)
+
+### 🔍 مشاكل وجدناها
+1. **متوسطة:** `main.py:660` — خطأ AI Vision يُكتب بـ `print()` بدل `log.warning()` → يختفي من error logs
+2. **منخفضة:** `main.py:745-746` — رسالة "السوق مغلق" بـ `print()` بدل `log.info()`
+3. **منخفضة:** `main.py:776` — رسالة "الفحص التالي" بـ `print()` بدل `log.info()`
+4. **متوسطة (جديدة):** `main.py:585-603` — `journal` و`optimizer_self` غير مُهيَّأَين قبل `dashboard.start_polling()` → `AttributeError` محتمل في الثواني الأولى من التشغيل
+5. **ملاحظة:** لا log files لليوم — البوت لم يُشغَّل فعلياً على VPS بعد
+
+### ✅ إصلاحات طُبّقت تلقائياً
+1. `main.py:660` — `print()` → `log.warning()` لخطأ AI Vision
+2. `main.py:745-746` — `print()` × 2 → `log.info()` لرسالة السوق المغلق
+3. `main.py:776` — `print()` → `log.info()` لرسالة الفحص التالي
+4. `main.py:585` — إضافة `journal = None` و`optimizer_self = None` قبل `start_polling()`
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة:** `main.py:663` — `_now_h = datetime.now(timezone.utc).hour` (ينتظر تأكيد timezone VPS)
+2. **منخفضة:** إضافة `"strategy"` key في signal generators للـ Telegram label
+3. **منخفضة:** إصلاح دقة partial lots — `math.floor()` بدل `round()`
+
+### 📊 أداء اليوم
+- صفقات: 0 (لا بيانات — VPS لم يُشغَّل) | Win Rate: N/A | P&L: $0
+- ملاحظة: كل الأخطاء الحرجة المعروفة مُصلَحة — الكود جاهز للتشغيل الفعلي
+
+---

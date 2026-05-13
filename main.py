@@ -582,6 +582,9 @@ if __name__ == "__main__":
     dashboard.register_handler("optimize", cmd_optimize)
     dashboard.register_handler("reload", cmd_reload)
 
+    journal = None         # تُهيَّأ بعد start_polling — guards في الـ handlers تحمي من NameError
+    optimizer_self = None  # تُهيَّأ بعد start_polling
+
     dashboard.start_polling()
 
     dashboard.send(
@@ -657,7 +660,7 @@ if __name__ == "__main__":
                     if sent:
                         notifier.send("📧 تم إعداد وتوليد الرؤية الاقتصادية الصباحية بنجاح وإرسالها لإيميلك!")
                 except Exception as vi_err:
-                    print(f"⚠️ خطأ في توليد رؤية الإيميل: {vi_err}")
+                    log.warning(f"خطأ في توليد رؤية الإيميل: {vi_err}")
 
             # ساعة الوقت الحالي — تُستخدم في log push + heartbeat
             _now_h = datetime.now().hour
@@ -742,8 +745,7 @@ if __name__ == "__main__":
                 )
 
             if not is_market_open():
-                print(f"\n⏸️ [{time.strftime('%H:%M')}] السوق مغلق (عطلة نهاية الأسبوع)")
-                print(f"   ⏰ الفحص التالي بعد 60 دقيقة...")
+                log.info(f"السوق مغلق (عطلة نهاية الأسبوع) — {time.strftime('%H:%M')} | الفحص بعد 60 دقيقة")
                 time.sleep(60 * 60)
                 continue
 
@@ -773,7 +775,7 @@ if __name__ == "__main__":
             # تحليل فرص جديدة
             run_bot()
 
-            print(f"\n⏰ الفحص التالي بعد {SCAN_INTERVAL_MINUTES} دقيقة...")
+            log.info(f"الفحص التالي بعد {SCAN_INTERVAL_MINUTES} دقيقة")
             time.sleep(SCAN_INTERVAL_MINUTES * 60)
 
         except KeyboardInterrupt:
