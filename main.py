@@ -447,6 +447,7 @@ def run_bot():
                 # سجّل في Generator للـ trailing
                 gen.mark_trade_open(direction, result['price'], signal['sl'], signal['tp'])
                 open_pairs.add(pair)
+                rm.daily_trades += 1  # تفعيل حد الصفقات اليومية داخل نفس الدورة
 
             else:
                 log.error(f"{pair}: فشل تنفيذ الأمر — تحقق من AutoTrading والرصيد")
@@ -657,7 +658,7 @@ if __name__ == "__main__":
                     if sent:
                         notifier.send("📧 تم إعداد وتوليد الرؤية الاقتصادية الصباحية بنجاح وإرسالها لإيميلك!")
                 except Exception as vi_err:
-                    print(f"⚠️ خطأ في توليد رؤية الإيميل: {vi_err}")
+                    log.warning(f"خطأ في توليد رؤية الإيميل: {vi_err}")
 
             # ساعة الوقت الحالي — تُستخدم في log push + heartbeat
             _now_h = datetime.now().hour
@@ -742,8 +743,8 @@ if __name__ == "__main__":
                 )
 
             if not is_market_open():
-                print(f"\n⏸️ [{time.strftime('%H:%M')}] السوق مغلق (عطلة نهاية الأسبوع)")
-                print(f"   ⏰ الفحص التالي بعد 60 دقيقة...")
+                log.info(f"⏸️ السوق مغلق (عطلة نهاية الأسبوع) — {time.strftime('%H:%M')}")
+                log.info("الفحص التالي بعد 60 دقيقة")
                 time.sleep(60 * 60)
                 continue
 
@@ -773,7 +774,7 @@ if __name__ == "__main__":
             # تحليل فرص جديدة
             run_bot()
 
-            print(f"\n⏰ الفحص التالي بعد {SCAN_INTERVAL_MINUTES} دقيقة...")
+            log.info(f"الفحص التالي بعد {SCAN_INTERVAL_MINUTES} دقيقة")
             time.sleep(SCAN_INTERVAL_MINUTES * 60)
 
         except KeyboardInterrupt:
