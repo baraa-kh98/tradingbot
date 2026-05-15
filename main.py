@@ -447,6 +447,7 @@ def run_bot():
                 # سجّل في Generator للـ trailing
                 gen.mark_trade_open(direction, result['price'], signal['sl'], signal['tp'])
                 open_pairs.add(pair)
+                rm.daily_trades += 1  # تفعيل حد الصفقات اليومية داخل نفس الدورة
 
             else:
                 log.error(f"{pair}: فشل تنفيذ الأمر — تحقق من AutoTrading والرصيد")
@@ -581,9 +582,6 @@ if __name__ == "__main__":
     dashboard.register_handler("scan", cmd_scan)
     dashboard.register_handler("optimize", cmd_optimize)
     dashboard.register_handler("reload", cmd_reload)
-
-    journal = None         # تُهيَّأ بعد start_polling — guards في الـ handlers تحمي من NameError
-    optimizer_self = None  # تُهيَّأ بعد start_polling
 
     dashboard.start_polling()
 
@@ -745,7 +743,8 @@ if __name__ == "__main__":
                 )
 
             if not is_market_open():
-                log.info(f"السوق مغلق (عطلة نهاية الأسبوع) — {time.strftime('%H:%M')} | الفحص بعد 60 دقيقة")
+                log.info(f"⏸️ السوق مغلق (عطلة نهاية الأسبوع) — {time.strftime('%H:%M')}")
+                log.info("الفحص التالي بعد 60 دقيقة")
                 time.sleep(60 * 60)
                 continue
 
