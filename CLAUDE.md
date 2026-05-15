@@ -145,3 +145,76 @@ reports/fix_plan_YYYY-MM-DD.md → تقرير يومي من الروتين
 3. Re-run multi_pair_backtest.py to confirm
 4. Commit if all Sharpe ≥ targets
 ```
+
+---
+
+## 🤝 Nightly Agent Team Workflow
+
+عند كتابة "Launch nightly agent team workflow" — شغّل هذا النظام:
+
+### الهدف
+زيادة الربح الإجمالي بـ **1%** مقارنة بآخر نتيجة في `memory/strategy_results.md`.
+توقف فوراً عند التحقيق، أو بعد **20 iteration** كحد أقصى.
+
+### أدوار الفريق (Agent Definitions)
+- خبير اقتصادي: `.claude/agents/economic_analyst.md`
+- خبير تداول: `.claude/agents/trading_strategist.md`
+- مدير مخاطر: `.claude/agents/risk_manager.md`
+- مبرمج (أنت): تنفّذ ما يوافق عليه مدير المخاطر
+
+### خطوات كل Iteration
+
+```
+STEP 1 — Baseline
+  python3 backtest/multi_pair_backtest.py
+  احفظ النتائج → baseline_sharpe, baseline_return
+
+STEP 2 — Economic Analysis (Economic Analyst role)
+  اقرأ .claude/agents/economic_analyst.md
+  شغّل التحليل → اكتب reports/economic_analysis_TODAY.md
+
+STEP 3 — Strategy Proposals (Trading Strategist role)
+  اقرأ .claude/agents/trading_strategist.md
+  بناءً على التحليل الاقتصادي → اكتب reports/strategy_proposals_TODAY.md
+
+STEP 4 — Risk Review (Risk Manager role)
+  اقرأ .claude/agents/risk_manager.md
+  راجع المقترحات → اكتب reports/risk_approval_TODAY.md
+
+STEP 5 — Implementation (Software Engineer role)
+  لكل مقترح موافق عليه:
+    - عدّل ملف الاستراتيجية
+    - شغّل: python3 backtest/multi_pair_backtest.py
+    - قارن مع baseline
+    - إذا تحسّن: احتفظ بالتعديل
+    - إذا لم يتحسّن: ارجع للقيمة الأصلية (git checkout)
+
+STEP 6 — Decision
+  إذا total_return_new >= baseline_return + 1%:
+    → سجّل في memory/development_log.md
+    → أرسل تقرير عبر Telegram (telegram_dashboard.activate_fix_plan)
+    → STOP — الهدف تحقق ✅
+  إذا لم يتحقق:
+    → ابدأ iteration جديدة من STEP 2
+    → (حد أقصى 20 iteration)
+
+STEP 7 — Final Report
+  اكتب reports/nightly_report_TODAY.md:
+    - عدد الـ iterations
+    - التعديلات المطبّقة
+    - النتائج قبل وبعد
+    - التوصية للغد
+```
+
+### قواعد ثابتة للفريق
+- لا تعديل على risk params أبداً (1% per trade، RR 2.0، 3% daily max)
+- تعديل واحد فقط في كل iteration
+- كل تعديل يُختبر على `backtest_data/` كاملة (5-10 سنوات إذا متاح)
+- إذا Max DD تجاوز -15% بعد التعديل → ارجع فوراً
+
+### البيانات التاريخية الموسّعة
+```bash
+# لجلب بيانات 10 سنوات (شغّل مرة واحدة):
+python3 backtest/data_fetcher.py --years 10
+# النتيجة: backtest_data/*_H1_10years.csv
+```
