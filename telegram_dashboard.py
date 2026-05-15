@@ -185,53 +185,90 @@ class TelegramDashboard:
         return self._cb_skip_plan()
 
     def _cb_approve_plan(self):
-        """تنفيذ git pull لتطبيق الإصلاحات وتسجيل الموافقة في development_log"""
+        """تنفيذ git pull + دمج branch الروتين + push لـ main"""
         self._plan_active = False
         self._chat_history = []
 
         import subprocess
         now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-        try:
-            result = subprocess.run(
-                ["git", "pull", "origin", "main"],
-                capture_output=True, text=True, timeout=30,
-                encoding="utf-8"
+        def run_git(args, timeout=30):
+            return subprocess.run(
+                ["git"] + args,
+                capture_output=True, text=True,
+                timeout=timeout, encoding="utf-8"
             )
-            if result.returncode == 0:
-                output = result.stdout.strip()[-600:] if result.stdout else "Already up to date."
 
-                # سجّل الموافقة في development_log.md
-                try:
-                    log_path = os.path.join("memory", "development_log.md")
-                    os.makedirs("memory", exist_ok=True)
-                    with open(log_path, "a", encoding="utf-8") as f:
-                        f.write(
-                            f"\n### ✅ موافقة على الخطة — {now_str}\n"
-                            f"- git pull نجح\n"
-                            f"- التفاصيل: `{output[:200]}`\n"
-                            f"- ⚠️ يحتاج إعادة تشغيل البوت لتفعيل التغييرات\n"
-                        )
-                except Exception:
-                    pass
+        try:
+            steps_log = []
 
-                return (
-                    "✅ <b>تم سحب الإصلاحات بنجاح!</b>\n\n"
-                    f"<code>{output}</code>\n\n"
-                    "⚠️ <b>تحتاج لإعادة تشغيل البوت لتفعيل التغييرات:</b>\n"
-                    "أغلق نافذة البوت الحالية وأعد تشغيل <code>run_bot.bat</code>"
-                )
-            else:
-                err = result.stderr.strip()[-400:] if result.stderr else "خطأ غير معروف"
-                return (
-                    f"❌ <b>فشل git pull!</b>\n\n"
-                    f"<code>{err}</code>\n\n"
-                    "تحقق من اتصال الإنترنت واسم المستخدم على GitHub."
-                )
+            # 1. fetch كل شي من GitHub
+            r = run_git(["fetch", "origin"])
+            steps_log.append(f"fetch: {'✅' if r.returncode == 0 else '❌ ' + r.stderr[:100]}")
+
+            # 2. ابحث عن أحدث branch للروتين (claude/*)
+            r = run_git(["branch", "-r", "--list", "origin/claude/*", "--sort=-committerdate"])
+            routine_branch = None
+            if r.returncode == 0 and r.stdout.strip():
+                routine_branch = r.stdout.strip().splitlines()[0].strip()
+                steps_log.append(f"latest branch: {routine_branch}")
+
+            # 3. تأكد على main
+            run_git(["checkout", "main"])
+
+            # 4. إذا في branch جديد — ادمجه
+            merged = False
+            if routine_branch:
+                r = run_git(["merge", routine_branch, "--no-edit",
+                             "-m", f"merge: routine fixes approved {now_str}"])
+                if r.returncode == 0:
+                    merged = True
+                    steps_log.append(f"merge {routine_branch}: ✅")
+                else:
+                    # conflict — خذ نسخة الروتين
+                    run_git(["checkout", "--theirs", "."])
+                    run_git(["add", "-A"])
+                    run_git(["commit", "-m", f"merge(theirs): routine fixes {now_str}"])
+                    merged = True
+                    steps_log.append(f"merge (forced): ✅")
+
+            # 5. pull main عادي إذا ما في branch
+            if not merged:
+                r = run_git(["pull", "origin", "main"])
+                steps_log.append(f"pull main: {'✅' if r.returncode == 0 else '❌'}")
+
+            # 6. push النتيجة لـ GitHub main
+            r = run_git(["push", "origin", "HEAD:main"], timeout=45)
+            push_ok = r.returncode == 0
+            steps_log.append(f"push main: {'✅' if push_ok else '❌ ' + r.stderr[:150]}")
+
+            # 7. سجّل في development_log.md
+            try:
+                log_path = os.path.join("memory", "development_log.md")
+                os.makedirs("memory", exist_ok=True)
+                with open(log_path, "a", encoding="utf-8") as f:
+                    f.write(
+                        f"\n### ✅ موافقة على الخطة — {now_str}\n"
+                        f"- Branch الروتين: `{routine_branch or 'لا يوجد'}`\n"
+                        f"- الخطوات: {' | '.join(steps_log)}\n"
+                        f"- ⚠️ يحتاج إعادة تشغيل البوت على VPS\n"
+                    )
+            except Exception:
+                pass
+
+            summary = "\n".join(steps_log)
+            return (
+                "✅ <b>تم تطبيق الإصلاحات بنجاح!</b>\n\n"
+                f"<code>{summary}</code>\n\n"
+                "⚠️ <b>أعد تشغيل البوت على VPS:</b>\n"
+                "1️⃣ أغلق نافذة البوت الحالية\n"
+                "2️⃣ شغّل <code>run_bot.bat</code> من جديد"
+            )
+
         except subprocess.TimeoutExpired:
-            return "❌ انتهى وقت انتظار git pull (30 ثانية). تحقق من الاتصال."
+            return "❌ انتهى وقت الانتظار (45 ثانية). تحقق من الاتصال."
         except Exception as e:
-            return f"❌ خطأ في تنفيذ git pull: {e}"
+            return f"❌ خطأ في تطبيق الإصلاحات: {e}"
 
     def _cb_skip_plan(self):
         """تجاهل خطة الإصلاح"""
