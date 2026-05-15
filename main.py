@@ -616,8 +616,8 @@ if __name__ == "__main__":
 
         try:
             # إعادة تعيين الحدود اليومية عند بداية يوم جديد
-            from datetime import datetime
-            today = datetime.now().date()
+            from datetime import datetime, timezone
+            today = datetime.now(timezone.utc).date()
             if last_day != today:
                 rm.reset_daily()
                 last_day = today
@@ -648,7 +648,7 @@ if __name__ == "__main__":
 
             # تقرير الرؤية الصباحية عبر الإيميل
             from config import VISION_REPORT_HOUR
-            if datetime.now().hour == VISION_REPORT_HOUR and last_vision_day != today:
+            if datetime.now(timezone.utc).hour == VISION_REPORT_HOUR and last_vision_day != today:
                 last_vision_day = today
                 try:
                     from strategy.ai_vision import AIVisionGenerator
@@ -659,8 +659,8 @@ if __name__ == "__main__":
                 except Exception as vi_err:
                     print(f"⚠️ خطأ في توليد رؤية الإيميل: {vi_err}")
 
-            # ساعة الوقت الحالي — تُستخدم في log push + heartbeat
-            _now_h = datetime.now().hour
+            # ساعة الوقت الحالي UTC — تُستخدم في log push + heartbeat
+            _now_h = datetime.now(timezone.utc).hour
 
             # ═══ رفع الـ logs لـ GitHub كل 6 ساعات ═══
             _log_push_hours = {0, 6, 12, 18}

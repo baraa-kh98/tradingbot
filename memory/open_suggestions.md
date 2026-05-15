@@ -1,6 +1,6 @@
 # اقتراحات مفتوحة — قيد الدراسة
 
-> آخر تحديث: 2026-05-12 (روتين صباحي)
+> آخر تحديث: 2026-05-15 (روتين صباحي)
 
 ---
 
@@ -31,13 +31,6 @@
 - **الإصلاح:** إضافة `"strategy": "EURUSD NY Breakout"` إلخ. في كل dict إشارة
 - **تاريخ الاكتشاف:** 2026-05-12
 - **الحالة:** 🔍 تحت المراقبة
-
-### [4] heartbeat يستخدم local time بدل UTC
-- **الملف:** `main.py` السطر 659
-- **المشكلة:** `_now_h = datetime.now().hour` — local time، إذا VPS في timezone مختلف الـ heartbeat يُرسل في وقت خاطئ
-- **الإصلاح:** `_now_h = datetime.now(timezone.utc).hour`
-- **تاريخ الاكتشاف:** 2026-05-12
-- **الحالة:** ⏳ ينتظر تأكيد timezone الـ VPS
 
 ---
 
@@ -70,3 +63,8 @@
 ### [E7] print() في trade_monitor — الأخطاء لا تُسجَّل
 - **طُبّق:** 2026-05-12 (روتين صباحي)
 - **النتيجة:** إضافة `get_logger` واستبدال print → logger في trade_monitor.py ✅
+
+### [E8] datetime.now() Local Time بدل UTC في Main Loop
+- **طُبّق:** 2026-05-15 (روتين صباحي)
+- **التفاصيل:** 3 أسطر في main.py (620, 651, 663) تحوّلت لـ `datetime.now(timezone.utc)`
+- **النتيجة:** daily reset و heartbeat و log push تعمل الآن بتوقيت UTC بغض النظر عن timezone الـ VPS ✅

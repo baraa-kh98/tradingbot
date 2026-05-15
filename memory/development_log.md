@@ -53,3 +53,26 @@
 - تأثير الإصلاحات: EURUSD/GBPUSD/XAUUSD قادرة على التنفيذ الكامل الآن للمرة الأولى
 
 ---
+
+---
+## يوم 2026-05-15 — الروتين اليومي الصباحي (06:10 UTC)
+
+### 🔍 مشاكل وجدناها
+1. **حرجة:** `main.py:620` — `today = datetime.now().date()` يستخدم local VPS time → يُسبّب تعارضاً في daily reset وأسماء الملفات إذا VPS مش في UTC
+2. **حرجة:** `main.py:651` — `datetime.now().hour == VISION_REPORT_HOUR` يستخدم local time → تقرير الرؤية يُرسَل في وقت خاطئ
+3. **حرجة:** `main.py:663` — `_now_h = datetime.now().hour` يستخدم local time → heartbeat و push_logs يُطلَقان على ساعات VPS لا UTC
+
+### ✅ إصلاحات طُبّقت تلقائياً
+1. `main.py:619-620` — `from datetime import datetime` → `from datetime import datetime, timezone` + `datetime.now().date()` → `datetime.now(timezone.utc).date()`
+2. `main.py:651` — `datetime.now().hour` → `datetime.now(timezone.utc).hour`
+3. `main.py:663` — `_now_h = datetime.now().hour` → `_now_h = datetime.now(timezone.utc).hour`
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **منخفضة:** إضافة `"strategy"` key في signal dicts — eurusd/gbpusd/xauusd_signal.py
+2. **منخفضة:** `math.floor()` بدل `round()` في partial lots — risk_manager.py:247
+3. **منخفضة:** تحسين MT5 connection error handling — executor.py:46
+
+### 📊 أداء اليوم
+- صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
+- ملاحظة: جميع الإصلاحات السابقة (2026-05-12) سارية المفعول في الكود
+---
