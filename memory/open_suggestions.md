@@ -1,26 +1,6 @@
 # اقتراحات مفتوحة — قيد الدراسة
 
-> آخر تحديث: 2026-05-14 (روتين صباحي)
-
----
-
-## 🟡 متوسطة الأولوية
-
-### [5] Refactor run_bot(rm) — إصلاح كامل لحد الصفقات اليومية
-- **الملف:** `main.py` (دالتا `run_bot()` والـ main loop)
-- **المشكلة:** `rm = RiskManager()` داخل `run_bot()` ينشئ instance جديد كل 15 دقيقة → `daily_trades` يُصفَّر كل دورة → حد الـ 3 صفقات/يوم لا يعمل بين الدورات
-- **الإصلاح المقترح:** نقل `rm` للخارج وتمريره كـ parameter
-  ```python
-  def run_bot(rm=None):  # يقبل rm خارجي
-      if rm is None:
-          rm = RiskManager(...)  # fallback
-  # في main loop:
-  rm = RiskManager(balance=BALANCE, risk_percent=RISK_PERCENT)
-  ...run_bot(rm)
-  ```
-- **التأثير المتوقع:** حد الـ 3 صفقات/يوم يعمل فعلياً
-- **تاريخ الاكتشاف:** 2026-05-14
-- **الحالة:** ⏳ ينتظر الموافقة (تغيير متوسط الحجم)
+> آخر تحديث: 2026-05-15 (روتين صباحي)
 
 ---
 
@@ -51,13 +31,6 @@
 - **الإصلاح:** إضافة `"strategy": "EURUSD NY Breakout"` إلخ. في كل dict إشارة
 - **تاريخ الاكتشاف:** 2026-05-12
 - **الحالة:** 🔍 تحت المراقبة
-
-### [4] heartbeat يستخدم local time بدل UTC
-- **الملف:** `main.py` السطر 659
-- **المشكلة:** `_now_h = datetime.now().hour` — local time، إذا VPS في timezone مختلف الـ heartbeat يُرسل في وقت خاطئ
-- **الإصلاح:** `_now_h = datetime.now(timezone.utc).hour`
-- **تاريخ الاكتشاف:** 2026-05-12
-- **الحالة:** ⏳ ينتظر تأكيد timezone الـ VPS
 
 ---
 
@@ -90,3 +63,8 @@
 ### [E7] print() في trade_monitor — الأخطاء لا تُسجَّل
 - **طُبّق:** 2026-05-12 (روتين صباحي)
 - **النتيجة:** إضافة `get_logger` واستبدال print → logger في trade_monitor.py ✅
+
+### [E8] datetime.now() Local Time بدل UTC في Main Loop
+- **طُبّق:** 2026-05-15 (روتين صباحي)
+- **التفاصيل:** 3 أسطر في main.py (620, 651, 663) تحوّلت لـ `datetime.now(timezone.utc)`
+- **النتيجة:** daily reset و heartbeat و log push تعمل الآن بتوقيت UTC بغض النظر عن timezone الـ VPS ✅

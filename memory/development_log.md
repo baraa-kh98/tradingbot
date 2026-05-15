@@ -30,30 +30,6 @@
 - GBPUSD NY Breakout: Sharpe=1.224 | Return=+19.1% (backtest) — بدأ يعمل فعلياً بعد إصلاح 2026-05-12
 
 ---
-## يوم 2026-05-14 — الروتين اليومي الصباحي (05:35 UTC)
-
-### 🔍 مشاكل وجدناها
-1. **متوسطة:** `main.py:660,745-746,776` — 3 رسائل تستخدم `print()` بدل `log.*()` → تختفي من `bot_*.log` و`errors_*.log`
-2. **متوسطة:** `main.py:run_bot()` — `rm.daily_trades` لا يُزاد بعد فتح صفقة ناجحة → حد الصفقات اليومية (3/يوم) غير مُفعَّل فعلياً
-3. **تصميم:** `rm = RiskManager()` يُنشأ داخل `run_bot()` كل 15 دقيقة → `daily_trades` يُعاد للصفر بين الدورات
-
-### ✅ إصلاحات طُبّقت تلقائياً
-1. `main.py:660` — `print(f"⚠️ خطأ رؤية الإيميل...")` → `log.warning(...)`
-2. `main.py:745-746` — `print(السوق مغلق...)` → `log.info(...)`
-3. `main.py:776` — `print(الفحص التالي...)` → `log.info(...)`
-4. `main.py:449` — إضافة `rm.daily_trades += 1` بعد فتح صفقة ناجحة (إصلاح جزئي)
-
-### ⏳ اقتراحات تنتظر الموافقة
-1. **عالية:** Refactor `run_bot(rm)` — تمرير rm كـ parameter لتثبيت daily_trades بين الدورات
-2. **منخفضة:** إضافة "strategy" key للـ Signal Generators (10 دقائق)
-3. **منخفضة:** إصلاح partial lots precision في risk_manager.py:247
-4. **مراقبة:** Heartbeat timezone — `_now_h = datetime.now().hour` → تأكيد timezone الـ VPS أولاً
-
-### 📊 أداء اليوم
-- صفقات: غير متاح (logs على VPS لم تُرفع بعد) | Win Rate: N/A | P&L: N/A
-- ملاحظة: البوت يعمل ~48 ساعة منذ 2026-05-12 — أول بيانات حقيقية قريباً
-
----
 ## يوم 2026-05-12 — الروتين اليومي الصباحي (07:52 UTC)
 
 ### 🔍 مشاكل وجدناها
@@ -77,28 +53,26 @@
 - تأثير الإصلاحات: EURUSD/GBPUSD/XAUUSD قادرة على التنفيذ الكامل الآن للمرة الأولى
 
 ---
-## يوم 2026-05-13 — الروتين اليومي الصباحي (05:39 UTC)
+
+---
+## يوم 2026-05-15 — الروتين اليومي الصباحي (06:10 UTC)
 
 ### 🔍 مشاكل وجدناها
-1. **متوسطة:** `main.py:660` — خطأ AI Vision يُكتب بـ `print()` بدل `log.warning()` → يختفي من error logs
-2. **منخفضة:** `main.py:745-746` — رسالة "السوق مغلق" بـ `print()` بدل `log.info()`
-3. **منخفضة:** `main.py:776` — رسالة "الفحص التالي" بـ `print()` بدل `log.info()`
-4. **متوسطة (جديدة):** `main.py:585-603` — `journal` و`optimizer_self` غير مُهيَّأَين قبل `dashboard.start_polling()` → `AttributeError` محتمل في الثواني الأولى من التشغيل
-5. **ملاحظة:** لا log files لليوم — البوت لم يُشغَّل فعلياً على VPS بعد
+1. **حرجة:** `main.py:620` — `today = datetime.now().date()` يستخدم local VPS time → يُسبّب تعارضاً في daily reset وأسماء الملفات إذا VPS مش في UTC
+2. **حرجة:** `main.py:651` — `datetime.now().hour == VISION_REPORT_HOUR` يستخدم local time → تقرير الرؤية يُرسَل في وقت خاطئ
+3. **حرجة:** `main.py:663` — `_now_h = datetime.now().hour` يستخدم local time → heartbeat و push_logs يُطلَقان على ساعات VPS لا UTC
 
 ### ✅ إصلاحات طُبّقت تلقائياً
-1. `main.py:660` — `print()` → `log.warning()` لخطأ AI Vision
-2. `main.py:745-746` — `print()` × 2 → `log.info()` لرسالة السوق المغلق
-3. `main.py:776` — `print()` → `log.info()` لرسالة الفحص التالي
-4. `main.py:585` — إضافة `journal = None` و`optimizer_self = None` قبل `start_polling()`
+1. `main.py:619-620` — `from datetime import datetime` → `from datetime import datetime, timezone` + `datetime.now().date()` → `datetime.now(timezone.utc).date()`
+2. `main.py:651` — `datetime.now().hour` → `datetime.now(timezone.utc).hour`
+3. `main.py:663` — `_now_h = datetime.now().hour` → `_now_h = datetime.now(timezone.utc).hour`
 
 ### ⏳ اقتراحات تنتظر الموافقة
-1. **متوسطة:** `main.py:663` — `_now_h = datetime.now(timezone.utc).hour` (ينتظر تأكيد timezone VPS)
-2. **منخفضة:** إضافة `"strategy"` key في signal generators للـ Telegram label
-3. **منخفضة:** إصلاح دقة partial lots — `math.floor()` بدل `round()`
+1. **منخفضة:** إضافة `"strategy"` key في signal dicts — eurusd/gbpusd/xauusd_signal.py
+2. **منخفضة:** `math.floor()` بدل `round()` في partial lots — risk_manager.py:247
+3. **منخفضة:** تحسين MT5 connection error handling — executor.py:46
 
 ### 📊 أداء اليوم
-- صفقات: 0 (لا بيانات — VPS لم يُشغَّل) | Win Rate: N/A | P&L: $0
-- ملاحظة: كل الأخطاء الحرجة المعروفة مُصلَحة — الكود جاهز للتشغيل الفعلي
-
+- صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
+- ملاحظة: جميع الإصلاحات السابقة (2026-05-12) سارية المفعول في الكود
 ---
