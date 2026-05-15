@@ -156,53 +156,86 @@ reports/fix_plan_YYYY-MM-DD.md → تقرير يومي من الروتين
 زيادة الربح الإجمالي بـ **1%** مقارنة بآخر نتيجة في `memory/strategy_results.md`.
 توقف فوراً عند التحقيق، أو بعد **20 iteration** كحد أقصى.
 
-### أدوار الفريق (Agent Definitions)
-- خبير اقتصادي: `.claude/agents/economic_analyst.md`
-- خبير تداول: `.claude/agents/trading_strategist.md`
-- مدير مخاطر: `.claude/agents/risk_manager.md`
-- مبرمج (أنت): تنفّذ ما يوافق عليه مدير المخاطر
+### الفريق الكامل — 8 أعضاء
+- 🔧 `.claude/agents/sre_engineer.md` — موثوقية النظام
+- 📊 `.claude/agents/data_engineer.md` — جودة البيانات
+- 🌍 `.claude/agents/economic_analyst.md` — تحليل ماكرو
+- 🧮 `.claude/agents/quant_analyst.md` — تحقق إحصائي
+- 📈 `.claude/agents/trading_strategist.md` — تحسين الاستراتيجية
+- 🛡️ `.claude/agents/risk_manager.md` — إدارة المخاطر
+- 💰 `.claude/agents/execution_analyst.md` — تكاليف التنفيذ
+- 💻 Software Engineer (أنت) — تنفيذ + backtest
 
 ### خطوات كل Iteration
 
 ```
 STEP 1 — Baseline
   python3 backtest/multi_pair_backtest.py
-  احفظ النتائج → baseline_sharpe, baseline_return
+  احفظ النتائج (Baseline الحالي: Return 27.14%، Sharpe 1.21)
 
-STEP 2 — Economic Analysis (Economic Analyst role)
+STEP 2 — Infrastructure Check (SRE Engineer)
+  اقرأ .claude/agents/sre_engineer.md
+  افحص logs الأخطاء واتصال MT5 والـ heartbeat
+  → اكتب reports/sre_report_TODAY.md
+  ⚠️ إذا في مشكلة حرجة → أصلحها أولاً قبل المتابعة
+
+STEP 3 — Data Quality (Data Engineer)
+  اقرأ .claude/agents/data_engineer.md
+  افحص جودة backtest_data/ وصحة الـ timestamps
+  → اكتب reports/data_quality_TODAY.md
+  ⚠️ إذا في بيانات معطوبة → لا تكمل حتى تُصلح
+
+STEP 4 — Economic Analysis (Economic Analyst)
   اقرأ .claude/agents/economic_analyst.md
-  شغّل التحليل → اكتب reports/economic_analysis_TODAY.md
+  حلّل الظروف الاقتصادية لكل زوج
+  → اكتب reports/economic_analysis_TODAY.md
 
-STEP 3 — Strategy Proposals (Trading Strategist role)
+STEP 5 — Strategy Proposal (Trading Strategist)
   اقرأ .claude/agents/trading_strategist.md
-  بناءً على التحليل الاقتصادي → اكتب reports/strategy_proposals_TODAY.md
+  اقترح تعديلاً واحداً محدداً بناءً على التحليل
+  → اكتب reports/strategy_proposals_TODAY.md
 
-STEP 4 — Risk Review (Risk Manager role)
+STEP 6 — Statistical Validation (Quant Analyst)
+  اقرأ .claude/agents/quant_analyst.md
+  تحقق: هل المقترح منطقي إحصائياً؟ خطر overfitting؟
+  → اكتب reports/quant_analysis_TODAY.md
+  ❌ إذا رفض → عد لـ STEP 5 مع تعديل مختلف
+
+STEP 7 — Risk Approval (Risk Manager)
   اقرأ .claude/agents/risk_manager.md
-  راجع المقترحات → اكتب reports/risk_approval_TODAY.md
+  راجع المقترح + رأي الكمّي → وافق أو ارفض
+  → اكتب reports/risk_approval_TODAY.md
+  ❌ إذا رفض → عد لـ STEP 5
 
-STEP 5 — Implementation (Software Engineer role)
-  لكل مقترح موافق عليه:
+STEP 8 — Execution Cost (Execution Analyst)
+  اقرأ .claude/agents/execution_analyst.md
+  احسب التكلفة الفعلية (spread + slippage) للتعديل المقترح
+  → اكتب reports/execution_analysis_TODAY.md
+  ⚠️ إذا التكلفة تأكل الربح → أبلغ Risk Manager
+
+STEP 9 — Implementation (Software Engineer)
+  لكل مقترح وافق عليه الجميع:
     - عدّل ملف الاستراتيجية
     - شغّل: python3 backtest/multi_pair_backtest.py
     - قارن مع baseline
-    - إذا تحسّن: احتفظ بالتعديل
-    - إذا لم يتحسّن: ارجع للقيمة الأصلية (git checkout)
+    - إذا تحسّن → احتفظ بالتعديل
+    - إذا لم يتحسّن → ارجع: git checkout strategy/ -- .
 
-STEP 6 — Decision
-  إذا total_return_new >= baseline_return + 1%:
+STEP 10 — Decision
+  إذا total_return_new >= 28.14% (baseline + 1%):
     → سجّل في memory/development_log.md
-    → أرسل تقرير عبر Telegram (telegram_dashboard.activate_fix_plan)
-    → STOP — الهدف تحقق ✅
+    → أرسل تقرير عبر Telegram
+    → git add . && git commit && git push origin main
+    → STOP ✅
   إذا لم يتحقق:
-    → ابدأ iteration جديدة من STEP 2
-    → (حد أقصى 20 iteration)
+    → iteration جديدة من STEP 4 (تجاوز STEP 2-3)
+    → حد أقصى 20 iteration
 
-STEP 7 — Final Report
-  اكتب reports/nightly_report_TODAY.md:
-    - عدد الـ iterations
-    - التعديلات المطبّقة
-    - النتائج قبل وبعد
+STEP 11 — Final Report
+  اكتب reports/nightly_report_TODAY.md شامل:
+    - ملخص كل الأعضاء الثمانية
+    - عدد الـ iterations والتعديلات
+    - النتائج قبل وبعد لكل زوج
     - التوصية للغد
 ```
 
