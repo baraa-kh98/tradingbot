@@ -76,3 +76,26 @@
 - صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
 - ملاحظة: جميع الإصلاحات السابقة (2026-05-12) سارية المفعول في الكود
 ---
+
+---
+## يوم 2026-05-16 — الروتين اليومي الصباحي (05:50 UTC)
+
+### 🔍 مشاكل وجدناها
+1. **متوسطة:** `strategy/xauusd_signal.py:126-162` — `_regime_check()` تستدعي yfinance API في كل دورة (كل 15 دقيقة) بدون Cache → تضيف latency وتُعطّل الـ Regime Filter عند فشل API (fail-open)
+2. **منخفضة/مراقبة:** `strategy/xauusd_signal.py:150` — `estimated_cpi = 2.8` مُثبَّت يدوياً وسيُصبح قديماً
+3. **توثيق:** `reports/xauusd_regime_filter_results.json` يقول "decision: ❌ REJECT" لكن الكود نُشر — التناقض بسبب أن القرار يشير للمقترح الأصلي لا للـ Grid Search Best
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات حرجة اليوم — النظام مستقر
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة:** Cache لـ `_regime_check()` في `xauusd_signal.py` — تخزين نتيجة VIX/TNX ساعة كاملة
+2. **منخفضة:** `math.floor()` بدل `round()` في partial lots — risk_manager.py:247
+3. **منخفضة:** `logger` بدل `print()` في executor.py — لتسجيل أخطاء MT5
+4. **منخفضة:** إضافة "strategy" key في signal dicts
+
+### 📊 أداء اليوم
+- صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
+- حدث مهم: XAUUSD Regime Filter نُشر (Sharpe 0.73→1.31) — Commit 6cf31f6
+- الاستراتيجية الجديدة تتداول ~38 صفقة/سنة (بدل 203) — تحتاج مراقبة على VPS
+---
