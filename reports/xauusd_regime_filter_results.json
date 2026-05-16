@@ -1,0 +1,179 @@
+{
+  "proposal": "XAUUSD Regime Filter",
+  "date": "2026-05-16",
+  "baseline": {
+    "trades": 203,
+    "win_rate": 35.467980295566505,
+    "return": 16.31264228359194,
+    "max_dd": -6.771972458892661,
+    "sharpe": 0.7251282863495246,
+    "pf": 1.2501472886001261
+  },
+  "proposed": {
+    "trades": 20,
+    "win_rate": 45.0,
+    "return": 4.5417013016479535,
+    "max_dd": -4.569810690990228,
+    "sharpe": 0.554677192429397,
+    "pf": 1.7241008597961998
+  },
+  "delta": {
+    "sharpe": -0.1704510939201277,
+    "return": -11.770940981943987,
+    "max_dd": 2.2021617679024326,
+    "win_rate": 9.532019704433495,
+    "trades": -183,
+    "pf": 0.4739535711960736
+  },
+  "success_criteria": {
+    "Sharpe ≥ 1.25": {
+      "value": 0.554677192429397,
+      "target": 1.25,
+      "passed": false
+    },
+    "Win Rate ≥ 44%": {
+      "value": 45.0,
+      "target": 44.0,
+      "passed": true
+    },
+    "Trades 80-180": {
+      "value": 20,
+      "target": "80-180",
+      "passed": false
+    },
+    "Max DD ≤ 12%": {
+      "value": 4.569810690990228,
+      "target": 12.0,
+      "passed": true
+    },
+    "Sharpe Δ ≥ +0.25": {
+      "value": -0.1704510939201277,
+      "target": 0.25,
+      "passed": false
+    }
+  },
+  "decision": "❌ REJECT",
+  "grid_search_best": {
+    "vix_threshold": 24,
+    "real_yield_threshold": 1.2,
+    "adx_min": 28,
+    "trades": 38,
+    "win_rate": 44.7,
+    "return_pct": 14.23,
+    "max_dd": -3.61,
+    "sharpe": 1.306,
+    "profit_factor": 2.492
+  },
+  "grid_search_top10": [
+    {
+      "vix_threshold": 24,
+      "real_yield_threshold": 1.2,
+      "adx_min": 28,
+      "trades": 38,
+      "win_rate": 44.7,
+      "return_pct": 14.23,
+      "max_dd": -3.61,
+      "sharpe": 1.306,
+      "profit_factor": 2.492
+    },
+    {
+      "vix_threshold": 24,
+      "real_yield_threshold": 1.2,
+      "adx_min": 30,
+      "trades": 35,
+      "win_rate": 42.9,
+      "return_pct": 12.63,
+      "max_dd": -3.01,
+      "sharpe": 1.261,
+      "profit_factor": 2.399
+    },
+    {
+      "vix_threshold": 22,
+      "real_yield_threshold": 1.2,
+      "adx_min": 28,
+      "trades": 39,
+      "win_rate": 43.6,
+      "return_pct": 12.23,
+      "max_dd": -3.61,
+      "sharpe": 1.104,
+      "profit_factor": 2.099
+    },
+    {
+      "vix_threshold": 23,
+      "real_yield_threshold": 1.2,
+      "adx_min": 28,
+      "trades": 39,
+      "win_rate": 43.6,
+      "return_pct": 12.23,
+      "max_dd": -3.61,
+      "sharpe": 1.104,
+      "profit_factor": 2.099
+    },
+    {
+      "vix_threshold": 24,
+      "real_yield_threshold": 0.8,
+      "adx_min": 28,
+      "trades": 11,
+      "win_rate": 63.6,
+      "return_pct": 8.49,
+      "max_dd": -2.08,
+      "sharpe": 1.09,
+      "profit_factor": 3.371
+    },
+    {
+      "vix_threshold": 24,
+      "real_yield_threshold": 0.8,
+      "adx_min": 30,
+      "trades": 9,
+      "win_rate": 66.7,
+      "return_pct": 6.86,
+      "max_dd": -1.48,
+      "sharpe": 1.048,
+      "profit_factor": 3.447
+    },
+    {
+      "vix_threshold": 22,
+      "real_yield_threshold": 1.2,
+      "adx_min": 30,
+      "trades": 36,
+      "win_rate": 41.7,
+      "return_pct": 10.63,
+      "max_dd": -3.01,
+      "sharpe": 1.037,
+      "profit_factor": 1.998
+    },
+    {
+      "vix_threshold": 23,
+      "real_yield_threshold": 1.2,
+      "adx_min": 30,
+      "trades": 36,
+      "win_rate": 41.7,
+      "return_pct": 10.63,
+      "max_dd": -3.01,
+      "sharpe": 1.037,
+      "profit_factor": 1.998
+    },
+    {
+      "vix_threshold": 21,
+      "real_yield_threshold": 1.2,
+      "adx_min": 28,
+      "trades": 41,
+      "win_rate": 41.5,
+      "return_pct": 11.12,
+      "max_dd": -3.63,
+      "sharpe": 0.962,
+      "profit_factor": 1.914
+    },
+    {
+      "vix_threshold": 24,
+      "real_yield_threshold": 1.0,
+      "adx_min": 28,
+      "trades": 21,
+      "win_rate": 47.6,
+      "return_pct": 8.59,
+      "max_dd": -3.31,
+      "sharpe": 0.956,
+      "profit_factor": 2.339
+    }
+  ]
+}

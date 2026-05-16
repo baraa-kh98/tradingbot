@@ -37,7 +37,12 @@
       "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 backtest/eurusd_research.py)",
       "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 backtest/eurusd_finetune.py)",
       "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 backtest/gbpusd_research.py)",
-      "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 backtest/gbpusd_finetune.py)"
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 backtest/gbpusd_finetune.py)",
+      "Bash(python3 -c ':*)",
+      "Bash(python3 -c \"import multi_server; print\\('✅ multi_server OK'\\)\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(mkdir -p /Users/baraakhattab/Desktop/tradingbot/.claude/agents)"
     ]
   }
 }

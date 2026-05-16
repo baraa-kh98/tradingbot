@@ -30,7 +30,8 @@ def load_csv(path):
         return None
     df = pd.read_csv(path, index_col=0, parse_dates=True)
     df.index = pd.to_datetime(df.index, utc=True)
-    cols = [c for c in ["Open","High","Low","Close","Volume"] if c in df.columns]
+    # Keep OHLCV + technical indicators (ATR, EMA)
+    cols = [c for c in ["Open","High","Low","Close","Volume","ATR","EMA_20","EMA_50"] if c in df.columns]
     return df[cols].dropna()
 
 
@@ -414,6 +415,157 @@ class LondonADX(_Base):
 
 
 # ═══════════════════════════════════════════════════════════════
+# F. ASIA/LONDON HYBRID — Proposal from Trading Strategist 2026-05-16
+# ═══════════════════════════════════════════════════════════════
+
+class LondonAsiaHybrid(_Base):
+    """
+    Asia/London Hybrid — Range 00:00-02:59, Entry 03:00-09:59
+    Proposed by Trading Strategist 2026-05-16
+    Target: Sharpe 0.97 → 1.25-1.45
+    """
+
+    buffer_pips    = 3
+    min_rr         = 3.0
+    min_range_pips = 40
+    max_range_pips = 200
+
+    asia_range_start  = 0   # 00:00 UTC (Tokyo morning)
+    asia_range_end    = 3   # 02:59 UTC (Tokyo mid-session)
+    entry_start       = 3   # 03:00 UTC (late Asia entry begins)
+    entry_end         = 10  # 09:59 UTC (London morning entry ends)
+
+    def init(self):
+        pass
+
+    def next(self):
+        idx = len(self.data) - 1
+        if idx < 20 or self.position:
+            return
+
+        ts   = self.data.index[-1]
+        hour = getattr(ts, "hour", -1)
+
+        # Entry window check: 03:00-09:59 UTC
+        if not (self.entry_start <= hour < self.entry_end):
+            return
+
+        # Calculate Asia range (00:00-02:59) using custom method
+        ah, al = self._asia_range_custom(idx)
+        if ah is None:
+            return
+
+        pip = PIP_VALUE
+        rng = ah - al
+        if rng < self.min_range_pips * pip or rng > self.max_range_pips * pip:
+            return
+
+        buf   = self.buffer_pips * pip
+        price = float(self.data.Close[-1])
+        bias  = self._h4_bias(ts)
+
+        # Entry logic (same as LondonClean)
+        if price > ah + buf and bias != "BEARISH":
+            sl   = al
+            risk = price - sl
+            if risk > 0:
+                self.buy(sl=sl, tp=price + risk * self.min_rr)
+
+        elif price < al - buf and bias != "BULLISH":
+            sl   = ah
+            risk = sl - price
+            if risk > 0:
+                self.sell(sl=sl, tp=price - risk * self.min_rr)
+
+    def _asia_range_custom(self, idx):
+        """Calculate range for 00:00-02:59 UTC (Tokyo morning core)"""
+        try:
+            ts   = self.data.index[idx]
+            ts_d = getattr(ts, "date", lambda: None)()
+            lookback = min(idx, 20)
+            highs, lows = [], []
+            for k in range(lookback, 0, -1):
+                bar  = self.data.index[idx - k]
+                bh   = getattr(bar, "hour", 0)
+                bd   = getattr(bar, "date", lambda: None)()
+                if bd == ts_d and self.asia_range_start <= bh < self.asia_range_end:
+                    highs.append(float(self.data.High[idx - k]))
+                    lows.append(float(self.data.Low[idx - k]))
+            if len(highs) < 2:  # Need at least 2 hours (narrower window)
+                return None, None
+            return max(highs), min(lows)
+        except Exception:
+            return None, None
+
+
+# ═══════════════════════════════════════════════════════════════
+# G. ATR FILTER — Proposal #2 from Trading Strategist 2026-05-16
+# ═══════════════════════════════════════════════════════════════
+
+class LondonATRFilter(_Base):
+    """
+    ATR Volatility Quality Filter — Proposal #2 (2026-05-16)
+    Same as LondonClean + ATR threshold to filter low-volatility days
+    Target: Sharpe 0.97 → 1.25-1.40 via quality filtering
+    """
+
+    buffer_pips    = 3
+    min_rr         = 3.0
+    min_range_pips = 40
+    max_range_pips = 200
+    min_atr        = 0.25  # ATR threshold (50th-75th percentile)
+
+    def init(self):
+        pass
+
+    def next(self):
+        idx = len(self.data) - 1
+        if idx < 20 or self.position:
+            return
+
+        ts   = self.data.index[-1]
+        hour = getattr(ts, "hour", -1)
+        if not (7 <= hour < 10):
+            return
+
+        ah, al = self._asia_range(idx)
+        if ah is None:
+            return
+
+        pip = PIP_VALUE
+        rng = ah - al
+        if rng < self.min_range_pips * pip:
+            return
+        if rng > self.max_range_pips * pip:
+            return
+
+        # NEW: ATR quality filter
+        if hasattr(self.data, "ATR") and len(self.data.ATR) > idx:
+            try:
+                current_atr = float(self.data.ATR[-1])
+                if current_atr < self.min_atr:
+                    return  # Skip low-volatility days
+            except Exception:
+                pass  # If ATR missing/invalid, proceed without filter
+
+        buf   = self.buffer_pips * pip
+        price = float(self.data.Close[-1])
+        bias  = self._h4_bias(ts)
+
+        if price > ah + buf and bias != "BEARISH":
+            sl   = al
+            risk = price - sl
+            if risk > 0:
+                self.buy(sl=sl, tp=price + risk * self.min_rr)
+
+        elif price < al - buf and bias != "BULLISH":
+            sl   = ah
+            risk = sl - price
+            if risk > 0:
+                self.sell(sl=sl, tp=price - risk * self.min_rr)
+
+
+# ═══════════════════════════════════════════════════════════════
 # RUN & COMPARE
 # ═══════════════════════════════════════════════════════════════
 
@@ -434,6 +586,224 @@ def fmt(r, name):
     return {"ret": ret, "sh": sh, "dd": dd, "wr": wr, "pf": pf, "tr": tr}
 
 
+def atr_sweep():
+    """
+    ATR Threshold Parameter Sweep for Proposal #2 Validation
+    Tests: [0.20, 0.22, 0.25, 0.28, 0.30]
+    Goal: Find optimal threshold that maximizes Sharpe while maintaining ≥40 trades
+    """
+    print("\n" + "═"*60)
+    print("  🔬 ATR FILTER PARAMETER SWEEP (Proposal #2)")
+    print("  Testing ATR thresholds: 0.20 → 0.30")
+    print("═"*60)
+
+    h1 = load_csv(H1_CSV)
+    h4 = load_csv(H4_CSV)
+    if h1 is None:
+        print("❌ H1 data missing"); return None
+
+    # Check for ATR column
+    if "ATR" not in h1.columns:
+        print("❌ ATR column missing from data"); return None
+
+    print(f"  ✅ H1: {len(h1):,} candles | {h1.index[0].date()} → {h1.index[-1].date()}")
+    print(f"  ✅ ATR column found")
+
+    # ATR statistics
+    atr_vals = h1["ATR"].dropna()
+    print(f"\n  📊 ATR Statistics (USDJPY H1, {len(atr_vals):,} bars):")
+    print(f"     25th percentile: {atr_vals.quantile(0.25):.3f}")
+    print(f"     50th percentile: {atr_vals.quantile(0.50):.3f}")
+    print(f"     75th percentile: {atr_vals.quantile(0.75):.3f}")
+    print(f"     90th percentile: {atr_vals.quantile(0.90):.3f}")
+
+    LondonATRFilter._h4 = h4
+    cash = 10_000
+    comm = 0.0002
+
+    thresholds = [0.20, 0.22, 0.25, 0.28, 0.30]
+    results = {}
+
+    print(f"\n{'═'*78}")
+    print(f"  {'ATR':>6} {'Trades':>7} {'Win%':>7} {'Return%':>8} {'DD%':>7} {'Sharpe':>7} {'PF':>5}")
+    print(f"  {'-'*72}")
+
+    for threshold in thresholds:
+        LondonATRFilter.min_atr = threshold
+        bt = Backtest(h1, LondonATRFilter, cash=cash, commission=comm)
+        r  = bt.run()
+
+        pf = r.get("Profit Factor", 0) or 0
+        pf = 0.0 if (isinstance(pf, float) and np.isnan(pf)) else float(pf)
+        sh = float(r["Sharpe Ratio"])  if not np.isnan(r["Sharpe Ratio"])  else 0.0
+        wr = float(r["Win Rate [%]"])  if not np.isnan(r["Win Rate [%]"])  else 0.0
+        ret = float(r["Return [%]"])
+        dd  = float(r["Max. Drawdown [%]"])
+        tr  = r["# Trades"]
+
+        results[threshold] = {
+            "sh": sh, "ret": ret, "dd": dd, "wr": wr, "pf": pf, "tr": tr
+        }
+
+        print(f"  {threshold:>6.2f} {tr:>7} {wr:>7.1f} {ret:>8.2f} {dd:>7.2f} {sh:>7.2f} {pf:>5.2f}")
+
+    # Find optimal threshold
+    valid = {k: v for k, v in results.items() if v["tr"] >= 40}
+    if not valid:
+        print(f"\n⚠️  All thresholds resulted in <40 trades. Lowering criteria to ≥30 trades.")
+        valid = {k: v for k, v in results.items() if v["tr"] >= 30}
+
+    if valid:
+        best_threshold = max(valid, key=lambda k: valid[k]["sh"])
+        best_stats = valid[best_threshold]
+
+        print(f"\n{'═'*60}")
+        print(f"  🏆 OPTIMAL THRESHOLD: {best_threshold:.2f}")
+        print(f"     Sharpe: {best_stats['sh']:.2f} | Trades: {best_stats['tr']} | Win Rate: {best_stats['wr']:.1f}%")
+        print(f"     Return: {best_stats['ret']:.2f}% | DD: {best_stats['dd']:.2f}%")
+    else:
+        best_threshold = None
+        best_stats = None
+        print(f"\n❌ No valid threshold found (all have <30 trades)")
+
+    return {
+        "threshold": best_threshold,
+        "stats": best_stats,
+        "all_results": results
+    }
+
+
+def validate_proposal_2():
+    """
+    Validate Proposal #2: ATR Volatility Quality Filter
+    Compare LondonClean (baseline) vs LondonATRFilter (proposed)
+    Decision criteria: Sharpe ≥ 1.25, Win Rate ≥ 40%, Trades ≥ 30
+    """
+    print("\n" + "═"*70)
+    print("  🔬 PROPOSAL #2 VALIDATION: ATR Volatility Quality Filter")
+    print("  Baseline: LondonTrail (Sharpe 0.97) vs ATR Filter (Target 1.25+)")
+    print("═"*70)
+
+    h1 = load_csv(H1_CSV)
+    h4 = load_csv(H4_CSV)
+    if h1 is None:
+        print("❌ H1 data missing"); return None
+
+    if "ATR" not in h1.columns:
+        print("❌ ATR column missing from data"); return None
+
+    print(f"  ✅ H1: {len(h1):,} candles | {h1.index[0].date()} → {h1.index[-1].date()}")
+
+    for cls in [LondonTrail, LondonATRFilter]:
+        cls._h4 = h4
+
+    cash = 10_000
+    comm = 0.0002
+
+    # Step 1: Run baseline (LondonTrail - current best)
+    print("\n" + "─"*70)
+    print("  📊 BASELINE: LondonTrail (Current Live Strategy)")
+    print("─"*70)
+    bt_baseline = Backtest(h1, LondonTrail, cash=cash, commission=comm)
+    r_baseline  = bt_baseline.run()
+    stats_baseline = fmt(r_baseline, "Baseline: LondonTrail")
+
+    # Step 2: Run ATR sweep to find optimal threshold
+    print("\n" + "─"*70)
+    print("  🔬 ATR THRESHOLD SWEEP")
+    print("─"*70)
+    sweep_results = atr_sweep()
+
+    if sweep_results is None or sweep_results["threshold"] is None:
+        print("\n❌ ATR sweep failed or no valid threshold found")
+        return None
+
+    best_threshold = sweep_results["threshold"]
+    best_stats = sweep_results["stats"]
+
+    # Step 3: Calculate improvement metrics
+    print("\n" + "═"*70)
+    print("  📈 RESULTS COMPARISON")
+    print("═"*70)
+
+    sharpe_improvement = best_stats["sh"] - stats_baseline["sh"]
+    wr_improvement = best_stats["wr"] - stats_baseline["wr"]
+    return_improvement = best_stats["ret"] - stats_baseline["ret"]
+    dd_change = best_stats["dd"] - stats_baseline["dd"]
+    trade_change = best_stats["tr"] - stats_baseline["tr"]
+
+    print(f"\n  Baseline (LondonTrail):")
+    print(f"    Sharpe: {stats_baseline['sh']:.2f} | Win Rate: {stats_baseline['wr']:.1f}% | Trades: {stats_baseline['tr']}")
+    print(f"    Return: {stats_baseline['ret']:.2f}% | DD: {stats_baseline['dd']:.2f}%")
+
+    print(f"\n  Proposed (ATR Filter @ {best_threshold:.2f}):")
+    print(f"    Sharpe: {best_stats['sh']:.2f} | Win Rate: {best_stats['wr']:.1f}% | Trades: {best_stats['tr']}")
+    print(f"    Return: {best_stats['ret']:.2f}% | DD: {best_stats['dd']:.2f}%")
+
+    print(f"\n  DELTA (Proposed - Baseline):")
+    print(f"    Sharpe:    {sharpe_improvement:+.2f} ({sharpe_improvement/stats_baseline['sh']*100:+.1f}%)")
+    print(f"    Win Rate:  {wr_improvement:+.1f}pp")
+    print(f"    Return:    {return_improvement:+.2f}pp")
+    print(f"    Drawdown:  {dd_change:+.2f}pp")
+    print(f"    Trades:    {trade_change:+.0f} ({trade_change/stats_baseline['tr']*100:+.1f}%)")
+
+    # Step 4: Decision logic
+    print("\n" + "═"*70)
+    print("  🎯 DECISION CRITERIA EVALUATION")
+    print("═"*70)
+
+    criteria = {
+        "Sharpe ≥ 1.25": best_stats["sh"] >= 1.25,
+        "Win Rate ≥ 40%": best_stats["wr"] >= 40.0,
+        "Trades ≥ 30": best_stats["tr"] >= 30,
+        "Sharpe improvement ≥ +0.15": sharpe_improvement >= 0.15,
+        "Max DD ≤ 10%": best_stats["dd"] <= 10.0,
+    }
+
+    for criterion, passed in criteria.items():
+        status = "✅" if passed else "❌"
+        print(f"  {status} {criterion}")
+
+    passed_count = sum(criteria.values())
+    total_count = len(criteria)
+
+    print(f"\n  Criteria Met: {passed_count}/{total_count}")
+
+    # Final decision
+    if passed_count >= 4:
+        decision = "APPROVE"
+        recommendation = f"Apply ATR threshold {best_threshold:.2f} to strategy/london_signal.py"
+        color = "✅"
+    elif passed_count >= 3:
+        decision = "CONDITIONAL APPROVE"
+        recommendation = f"ATR {best_threshold:.2f} shows improvement but needs paper trading validation"
+        color = "⚠️"
+    else:
+        decision = "REJECT"
+        recommendation = "ATR filter insufficient improvement, explore alternative approaches"
+        color = "❌"
+
+    print(f"\n{'═'*70}")
+    print(f"  {color} FINAL DECISION: {decision}")
+    print(f"  Recommendation: {recommendation}")
+    print(f"{'═'*70}\n")
+
+    return {
+        "decision": decision,
+        "baseline": stats_baseline,
+        "proposed": best_stats,
+        "threshold": best_threshold,
+        "improvement": {
+            "sharpe": sharpe_improvement,
+            "win_rate": wr_improvement,
+            "return": return_improvement,
+            "drawdown": dd_change,
+            "trades": trade_change
+        },
+        "criteria": criteria
+    }
+
+
 def run():
     print("\n" + "═"*60)
     print("  🏆 London Breakout — Final Comparison")
@@ -449,7 +819,7 @@ def run():
     if h4 is not None:
         print(f"  ✅ H4: {len(h4):,} شمعة")
 
-    for cls in [LondonClean, LondonTrail, LondonPartial, LondonWide, LondonADX]:
+    for cls in [LondonClean, LondonTrail, LondonPartial, LondonWide, LondonADX, LondonAsiaHybrid, LondonATRFilter]:
         cls._h4 = h4
 
     cash = 10_000
@@ -461,6 +831,8 @@ def run():
         ("C. London Partial (50% at 1.5:1, 50% at 3:1)",     LondonPartial),
         ("D. London Wide   (07-11 window, more trades)",      LondonWide),
         ("E. London ADX    (ADX>20 filter)",                  LondonADX),
+        ("F. Asia Hybrid   (range 00-03, entry 03-10)",       LondonAsiaHybrid),
+        ("G. ATR Filter    (ATR≥0.25 quality filter)",        LondonATRFilter),
     ]
 
     stats_all = {}
@@ -506,4 +878,8 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    # Run Proposal #2 validation
+    validation_result = validate_proposal_2()
+
+    # Optionally run full comparison
+    # run()
