@@ -11,6 +11,10 @@ MT5 Executor — تنفيذ الصفقات عبر MetaTrader 5
 """
 
 import time as time_module
+from utils.logger import get_logger
+
+_log = get_logger("executor")
+
 from config import (
     MT5_LOGIN,
     MT5_PASSWORD,
@@ -38,14 +42,12 @@ class Executor:
             import MetaTrader5 as mt5
             self.mt5 = mt5
         except ImportError:
-            print("❌ MetaTrader5 مش مثبّت. استخدم: pip install MetaTrader5")
-            print("   ⚠️ يعمل فقط على Windows مع MT5 مفتوح")
+            _log.error("MetaTrader5 غير مثبّت — pip install MetaTrader5 (Windows فقط)")
             return False
 
         # تهيئة MT5 — محاولة بدون مسار أولاً
         if not self.mt5.initialize():
-            print(f"⚠️ فشل تهيئة MT5 بدون مسار: {self.mt5.last_error()}")
-            print("🔍 جاري البحث عن MT5...")
+            _log.warning(f"فشل تهيئة MT5 بدون مسار: {self.mt5.last_error()} — جاري البحث...")
 
             # البحث التلقائي عن terminal64.exe
             import os
@@ -75,10 +77,7 @@ class Executor:
                     break
 
             if not mt5_found:
-                print("❌ فشل تهيئة MT5! تأكد إن:")
-                print("   1. برنامج MT5 مفتوح ومسجّل دخول")
-                print("   2. شغّل CMD كـ Administrator")
-                print("   3. MT5 و Python بنفس الصلاحيات")
+                _log.error("فشل تهيئة MT5 — تأكد: MT5 مفتوح، CMD كـ Administrator، نفس الصلاحيات")
                 return False
 
         # تسجيل الدخول — فقط إذا مش مسجّل أصلاً
@@ -95,11 +94,10 @@ class Executor:
                     server=self.server
                 )
                 if not authorized:
-                    print(f"❌ فشل تسجيل الدخول: {self.mt5.last_error()}")
-                    # لسا ممكن نكمل بالحساب الحالي
+                    _log.error(f"فشل تسجيل الدخول MT5: {self.mt5.last_error()}")
                     account = self.mt5.account_info()
                     if account:
-                        print(f"ℹ️ مكمّلين بالحساب الحالي: {account.login}")
+                        _log.warning(f"مكمّلين بالحساب الحالي: {account.login}")
                     else:
                         self.mt5.shutdown()
                         return False
@@ -151,7 +149,7 @@ class Executor:
         info = self.mt5.symbol_info(symbol)
 
         if info is None:
-            print(f"❌ الرمز {symbol} مش موجود. تأكد من اسم الرمز على MT5")
+            _log.error(f"الرمز {symbol} غير موجود على MT5 — تأكد من اسم الرمز")
             return None
 
         # تفعيل الرمز إذا مش مفعّل
@@ -343,11 +341,11 @@ class Executor:
     def _handle_result(self, result, signal, lots, sl, tp, order_type, entry=None):
         """معالجة نتيجة الأمر"""
         if result is None:
-            print(f"❌ order_send فشل: {self.mt5.last_error()}")
+            _log.error(f"order_send فشل: {self.mt5.last_error()}")
             return None
 
         if result.retcode != self.mt5.TRADE_RETCODE_DONE:
-            print(f"❌ فشل تنفيذ الصفقة: {result.retcode} — {result.comment}")
+            _log.error(f"فشل تنفيذ الصفقة: retcode={result.retcode} — {result.comment}")
             return None
 
         exec_price = entry if entry else result.price

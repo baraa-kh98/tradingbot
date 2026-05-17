@@ -99,3 +99,27 @@
 - حدث مهم: XAUUSD Regime Filter نُشر (Sharpe 0.73→1.31) — Commit 6cf31f6
 - الاستراتيجية الجديدة تتداول ~38 صفقة/سنة (بدل 203) — تحتاج مراقبة على VPS
 ---
+
+---
+## يوم 2026-05-17 — الروتين اليومي الصباحي (05:45 UTC) — السبت
+
+### 🔍 مشاكل وجدناها
+1. **ملاحظة:** `execution/executor.py:286` — Dead Code: `ORDER_TYPE_BUY_LIMIT` تُعيَّن ثم تُلغى فوراً بـ `ORDER_TYPE_BUY_STOP` — لا تأثير وظيفي، للتنظيف مستقبلاً
+2. **ملاحظة:** `main.py:676` — `from datetime import timezone as _tz_fix` داخل الـ loop مكرر — لا تأثير وظيفي، للتنظيف مستقبلاً
+3. **مستمرة:** `strategy/xauusd_signal.py:126` — `_regime_check()` بدون Cache — لا تزال تنتظر موافقة المستخدم
+
+### ✅ إصلاحات طُبّقت تلقائياً
+1. `risk/risk_manager.py:248` — `round()` → `math.floor()` للـ partial lots
+   - قبل: `round(lots * 0.5, 2)` → يُعطي 0.02 لـ lots=0.03 (66%)
+   - بعد: `max(0.01, math.floor(lots * 0.5 * 100) / 100)` → يُعطي 0.01 (50%)
+2. `execution/executor.py` — إضافة `_log = get_logger("executor")` + استبدال print() الأخطاء الحرجة بـ `_log.error/warning()`
+   - أخطاء MT5 initialize, login, order_send, symbol_info تُسجَّل الآن في `errors_*.log`
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة:** Cache لـ `_regime_check()` في `xauusd_signal.py:126` — تخزين نتيجة VIX/TNX ساعة كاملة
+2. **منخفضة:** إضافة "strategy" key في signal dicts — لتحسين إشعارات Telegram
+
+### 📊 أداء اليوم
+- صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
+- إصلاحات مجدولة نهاية الأسبوع طُبّقت بنجاح (2 إصلاحات)
+---

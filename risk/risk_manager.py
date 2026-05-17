@@ -9,6 +9,8 @@ Risk Manager — إدارة مخاطر متقدمة
 5. حدود يومية/أسبوعية
 """
 
+import math
+
 from config import (
     BALANCE,
     RISK_PERCENT,
@@ -244,8 +246,7 @@ class RiskManager:
         if self.partial_tp_enabled and not partial_closed:
             if profit_rr >= self.partial_tp1_rr:
                 actions["close_partial"] = True
-                actions["partial_lots"] = round(lots * self.partial_tp_ratio, 2)
-                actions["partial_lots"] = max(actions["partial_lots"], 0.01)
+                actions["partial_lots"] = max(0.01, math.floor(lots * self.partial_tp_ratio * 100) / 100)
                 actions["reason"] += f"✂️ إغلاق جزئي {actions['partial_lots']} lots عند {self.partial_tp1_rr}R | "
 
         # ─── 2. Break-Even ───
