@@ -123,3 +123,33 @@
 - صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
 - إصلاحات مجدولة نهاية الأسبوع طُبّقت بنجاح (2 إصلاحات)
 ---
+
+---
+## يوم 2026-05-18 — الروتين اليومي الصباحي (06:15 UTC) — الاثنين
+
+### 🔍 مشاكل وجدناها
+1. **منخفضة:** `execution/executor.py` — 11 print() statement في `_execute_market_order` و`_execute_limit_order` و`_handle_result` لم تُصلَح في تعديل 2026-05-17
+   - أخطاء validation مثل "SL >= Entry" كانت تُطبع في console فقط ولا تُسجَّل في `errors_*.log` على VPS
+2. **ملاحظة:** `executor.py:284` — Dead code: `ORDER_TYPE_BUY_LIMIT` كانت تُعيَّن ثم تُلغى فوراً بـ `ORDER_TYPE_BUY_STOP` + تعليق مضلّل
+
+### ✅ إصلاحات طُبّقت تلقائياً
+1. `execution/executor.py` — `_execute_market_order`:
+   - 4x `print("⚠️ ...")` → `_log.warning(...)` (SL/TP validation)
+   - `print("🔄 Market Order...")` → `_log.info(...)`
+2. `execution/executor.py` — `_execute_limit_order`:
+   - 4x `print("⚠️ ...")` → `_log.warning(...)` (SL/TP validation)
+   - `print("⏳ {order_name}...")` → `_log.info(...)` (دُمج في سطر واحد)
+3. `execution/executor.py` — `place_order`:
+   - `print("❌ إشارة غير صالحة")` → `_log.error(...)`
+4. `execution/executor.py` — `_handle_result`:
+   - 3x `print("✅ تم...")` → `_log.info(...)` (دُمج في سطر واحد)
+5. `execution/executor.py:284` — حذف Dead Code (السطر `ORDER_TYPE_BUY_LIMIT` الزائد) + توضيح التعليقات
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة:** Cache لـ `_regime_check()` في `xauusd_signal.py:126` — تخزين نتيجة VIX/TNX ساعة كاملة
+2. **منخفضة:** إضافة "strategy" key في signal dicts — لتحسين إشعارات Telegram
+
+### 📊 أداء اليوم
+- صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
+- إكمال تحويل print() → _log في executor.py (تكميل لإصلاح 2026-05-17)
+---

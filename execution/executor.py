@@ -192,7 +192,7 @@ class Executor:
         elif signal == "SELL":
             market_price = sym_info["bid"]
         else:
-            print(f"❌ إشارة غير صالحة: {signal}")
+            _log.error(f"❌ إشارة غير صالحة: {signal}")
             return None
 
         digits = sym_info["digits"]
@@ -237,22 +237,22 @@ class Executor:
         # تحقق من المستويات
         if signal == "BUY":
             if sl >= price:
-                print(f"⚠️ SL ({sl}) >= سعر الشراء ({price}) — مستويات غلط!")
+                _log.warning(f"⚠️ SL ({sl}) >= سعر الشراء ({price}) — مستويات غلط!")
                 return None
             if tp <= price:
-                print(f"⚠️ TP ({tp}) <= سعر الشراء ({price}) — الفرصة فاتت!")
+                _log.warning(f"⚠️ TP ({tp}) <= سعر الشراء ({price}) — الفرصة فاتت!")
                 return None
             order_type = self.mt5.ORDER_TYPE_BUY
         else:
             if sl <= price:
-                print(f"⚠️ SL ({sl}) <= سعر البيع ({price}) — مستويات غلط!")
+                _log.warning(f"⚠️ SL ({sl}) <= سعر البيع ({price}) — مستويات غلط!")
                 return None
             if tp >= price:
-                print(f"⚠️ TP ({tp}) >= سعر البيع ({price}) — الفرصة فاتت!")
+                _log.warning(f"⚠️ TP ({tp}) >= سعر البيع ({price}) — الفرصة فاتت!")
                 return None
             order_type = self.mt5.ORDER_TYPE_SELL
 
-        print(f"   🔄 Market Order: {signal} {lots} lots @ {price}")
+        _log.info(f"🔄 Market Order: {signal} {lots} lots @ {price}")
 
         request = {
             "action": self.mt5.TRADE_ACTION_DEAL,
@@ -278,11 +278,7 @@ class Executor:
 
         if signal == "BUY":
             if entry >= price:
-                # السعر تحت الدخول → Buy Limit (ننتظر السعر ينزل للدخول)
-                # لكن هذا يعني السعر لسا ما وصل فوق... غريب
-                # عادةً Buy Limit = ندخل عند سعر أقل
-                order_type = self.mt5.ORDER_TYPE_BUY_LIMIT
-                # لو الدخول فوق السعر الحالي = ننتظر السعر يرتفع = Buy Stop
+                # الدخول فوق السعر الحالي → ننتظر السعر يرتفع → Buy Stop
                 order_type = self.mt5.ORDER_TYPE_BUY_STOP
             else:
                 # الدخول تحت السعر → Buy Limit (ننتظر السعر ينزل)
@@ -302,23 +298,22 @@ class Executor:
             self.mt5.ORDER_TYPE_SELL_STOP: "SELL STOP",
         }.get(order_type, "PENDING")
 
-        print(f"   ⏳ {order_name}: {lots} lots @ {entry}")
-        print(f"   📍 السعر الحالي: {price} | ننتظر الوصول لـ {entry}")
+        _log.info(f"⏳ {order_name}: {lots} lots @ {entry} | السعر الحالي: {price}")
 
         # التحقق من المستويات
         if signal == "BUY":
             if sl >= entry:
-                print(f"⚠️ SL ({sl}) >= Entry ({entry}) — مستويات غلط!")
+                _log.warning(f"⚠️ SL ({sl}) >= Entry ({entry}) — مستويات غلط!")
                 return None
             if tp <= entry:
-                print(f"⚠️ TP ({tp}) <= Entry ({entry}) — مستويات غلط!")
+                _log.warning(f"⚠️ TP ({tp}) <= Entry ({entry}) — مستويات غلط!")
                 return None
         else:
             if sl <= entry:
-                print(f"⚠️ SL ({sl}) <= Entry ({entry}) — مستويات غلط!")
+                _log.warning(f"⚠️ SL ({sl}) <= Entry ({entry}) — مستويات غلط!")
                 return None
             if tp >= entry:
-                print(f"⚠️ TP ({tp}) >= Entry ({entry}) — مستويات غلط!")
+                _log.warning(f"⚠️ TP ({tp}) >= Entry ({entry}) — مستويات غلط!")
                 return None
 
         request = {
@@ -349,9 +344,7 @@ class Executor:
             return None
 
         exec_price = entry if entry else result.price
-        print(f"✅ تم: {order_type} {signal} {lots} lots @ {exec_price}")
-        print(f"   SL: {sl} | TP: {tp}")
-        print(f"   Ticket: {result.order}")
+        _log.info(f"✅ تم: {order_type} {signal} {lots} lots @ {exec_price} | SL: {sl} | TP: {tp} | Ticket: {result.order}")
 
         return {
             "ticket": result.order,

@@ -1,6 +1,6 @@
 # اقتراحات مفتوحة — قيد الدراسة
 
-> آخر تحديث: 2026-05-17 (روتين صباحي — السبت)
+> آخر تحديث: 2026-05-18 (روتين صباحي — الاثنين)
 
 ---
 
@@ -45,12 +45,9 @@
 
 ## 👁️ تحت المراقبة (جديدة — 2026-05-17)
 
-### [6] Dead Code في executor.py Limit Order
-- **الملف:** `execution/executor.py:286`
-- **الملاحظة:** `ORDER_TYPE_BUY_LIMIT` تُعيَّن في السطر 286 ثم تُلغى بـ `ORDER_TYPE_BUY_STOP` في السطر 288
-- **التأثير:** لا تأثير وظيفي — فقط مربك للقارئ
-- **تاريخ الاكتشاف:** 2026-05-17
-- **الحالة:** 🔍 للتنظيف عند أول Refactoring
+### [6] ~~Dead Code في executor.py Limit Order~~ — ✅ طُبّق 2026-05-18
+- **الملف:** `execution/executor.py`
+- **طُبّق:** حذف `ORDER_TYPE_BUY_LIMIT` الزائد + توضيح التعليقات
 
 ### [7] import مكرر داخل Main Loop
 - **الملف:** `main.py:620,676`
@@ -58,6 +55,10 @@
 - **التأثير:** لا تأثير وظيفي — Python يخزّن modules في cache
 - **تاريخ الاكتشاف:** 2026-05-17
 - **الحالة:** 🔍 للتنظيف عند أول فرصة
+
+### [8] ~~print() في order validation (executor.py)~~ — ✅ طُبّق 2026-05-18
+- **الملف:** `execution/executor.py`
+- **طُبّق:** 11 print() في _execute_market_order/_execute_limit_order/_handle_result → _log.warning/info/error
 
 ---
 
