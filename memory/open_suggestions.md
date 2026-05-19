@@ -1,6 +1,6 @@
 # اقتراحات مفتوحة — قيد الدراسة
 
-> آخر تحديث: 2026-05-18 (روتين صباحي — الاثنين)
+> آخر تحديث: 2026-05-19 (روتين صباحي — الثلاثاء)
 
 ---
 
@@ -49,16 +49,18 @@
 - **الملف:** `execution/executor.py`
 - **طُبّق:** حذف `ORDER_TYPE_BUY_LIMIT` الزائد + توضيح التعليقات
 
-### [7] import مكرر داخل Main Loop
-- **الملف:** `main.py:620,676`
-- **الملاحظة:** `timezone` مستورد مرتين داخل الـ while loop (620 كـ `timezone`، 676 كـ `_tz_fix`)
-- **التأثير:** لا تأثير وظيفي — Python يخزّن modules في cache
-- **تاريخ الاكتشاف:** 2026-05-17
-- **الحالة:** 🔍 للتنظيف عند أول فرصة
+### [7] ~~import مكرر داخل Main Loop~~ — ✅ طُبّق 2026-05-19
+- **الملف:** `main.py:676` (سابقاً)
+- **طُبّق:** حذف `from datetime import timezone as _tz_fix` + استبدال `_tz_fix.utc` بـ `timezone.utc`
 
 ### [8] ~~print() في order validation (executor.py)~~ — ✅ طُبّق 2026-05-18
 - **الملف:** `execution/executor.py`
 - **طُبّق:** 11 print() في _execute_market_order/_execute_limit_order/_handle_result → _log.warning/info/error
+
+### [9] ~~print() في close_position/modify_position (executor.py)~~ — ✅ طُبّق 2026-05-19
+- **الملف:** `execution/executor.py:378,412,420,464,487,491`
+- **طُبّق:** 6 print() في close_position()/modify_position() → _log.info/warning/error
+- **ملاحظة:** executor.py الآن نظيف تماماً من print() في دوال التداول الحي ✅
 
 ---
 

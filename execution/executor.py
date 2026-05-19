@@ -375,7 +375,7 @@ class Executor:
             positions = self.mt5.positions_get(symbol=symbol)
 
         if positions is None or len(positions) == 0:
-            print("ℹ️ لا توجد صفقات مفتوحة")
+            _log.info("ℹ️ لا توجد صفقات مفتوحة")
             return []
 
         results = []
@@ -409,7 +409,7 @@ class Executor:
             result = self.mt5.order_send(request)
 
             if result and result.retcode == self.mt5.TRADE_RETCODE_DONE:
-                print(f"✅ تم إغلاق صفقة #{pos.ticket} | ربح: {pos.profit}")
+                _log.info(f"✅ تم إغلاق صفقة #{pos.ticket} | ربح: {pos.profit}")
                 results.append({
                     "ticket": pos.ticket,
                     "profit": pos.profit,
@@ -417,7 +417,7 @@ class Executor:
                 })
             else:
                 error = result.comment if result else "unknown"
-                print(f"❌ فشل إغلاق #{pos.ticket}: {error}")
+                _log.error(f"❌ فشل إغلاق #{pos.ticket}: {error}")
 
         return results
 
@@ -461,7 +461,7 @@ class Executor:
 
         positions = self.mt5.positions_get(ticket=ticket)
         if not positions:
-            print(f"❌ الصفقة #{ticket} مش موجودة")
+            _log.warning(f"❌ الصفقة #{ticket} مش موجودة")
             return False
 
         pos = positions[0]
@@ -484,11 +484,11 @@ class Executor:
         result = self.mt5.order_send(request)
 
         if result and result.retcode == self.mt5.TRADE_RETCODE_DONE:
-            print(f"✅ تم تعديل #{ticket}: SL={new_sl} TP={new_tp}")
+            _log.info(f"✅ تم تعديل #{ticket}: SL={new_sl} TP={new_tp}")
             return True
         else:
             error = result.comment if result else "unknown"
-            print(f"❌ فشل تعديل #{ticket}: {error}")
+            _log.error(f"❌ فشل تعديل #{ticket}: {error}")
             return False
 
 

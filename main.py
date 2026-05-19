@@ -673,8 +673,7 @@ if __name__ == "__main__":
                     log.warning(f"push_logs خطأ: {_e}")
 
             # ═══ خطة الإصلاح — إرسال تلقائي الساعة 07:00 UTC ═══
-            from datetime import timezone as _tz_fix
-            _utc_now   = datetime.now(_tz_fix.utc)
+            _utc_now   = datetime.now(timezone.utc)
             _utc_h_fix = _utc_now.hour
             _today_fix = _utc_now.date()
 

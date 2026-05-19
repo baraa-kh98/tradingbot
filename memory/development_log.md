@@ -153,3 +153,34 @@
 - صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
 - إكمال تحويل print() → _log في executor.py (تكميل لإصلاح 2026-05-17)
 ---
+
+---
+## يوم 2026-05-19 — الروتين اليومي الصباحي (06:00 UTC) — الثلاثاء
+
+### 🔍 مشاكل وجدناها
+1. **منخفضة-متوسطة:** `execution/executor.py:378,412,420,464,487,491` — دوال `close_position()` و`modify_position()` تستخدم `print()` لنتائج الإغلاق والتعديل
+   - "❌ فشل إغلاق صفقة" كانت تُطبع في console فقط ولا تُسجَّل في `errors_*.log`
+   - "❌ فشل تعديل SL" كانت تُطبع في console فقط → Break-Even يفشل بصمت على VPS
+   - هذا آخر موضع متبقٍّ لـ `print()` في دوال التداول الحي بـ executor.py
+2. **للتنظيف:** `main.py:676` — `from datetime import timezone as _tz_fix` داخل while loop مكرر (timezone مستورد بالفعل في السطر 620)
+
+### ✅ إصلاحات طُبّقت تلقائياً
+1. `execution/executor.py:close_position()`:
+   - `print("ℹ️ لا توجد صفقات مفتوحة")` → `_log.info(...)`
+   - `print(f"✅ تم إغلاق صفقة...")` → `_log.info(...)`
+   - `print(f"❌ فشل إغلاق #{pos.ticket}...")` → `_log.error(...)` ⚠️ مهم
+2. `execution/executor.py:modify_position()`:
+   - `print(f"❌ الصفقة #{ticket} مش موجودة")` → `_log.warning(...)`
+   - `print(f"✅ تم تعديل #{ticket}...")` → `_log.info(...)`
+   - `print(f"❌ فشل تعديل #{ticket}...")` → `_log.error(...)` ⚠️ مهم
+3. `main.py:676` — حذف `from datetime import timezone as _tz_fix` + استبدال `_tz_fix.utc` بـ `timezone.utc`
+   - executor.py الآن **نظيف تماماً** من print() في كل دوال التداول الحي ✅
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة:** Cache لـ `_regime_check()` في `xauusd_signal.py:126` — ثلاثة أيام في الانتظار
+2. **منخفضة:** إضافة "strategy" key في signal dicts — لتحسين إشعارات Telegram
+
+### 📊 أداء اليوم
+- صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
+- executor.py اكتمل تحويله بالكامل: كل print() في دوال التداول → _log ✅
+---
