@@ -1,23 +1,37 @@
 # اقتراحات مفتوحة — قيد الدراسة
 
-> آخر تحديث: 2026-05-19 (روتين صباحي — الثلاثاء)
+> آخر تحديث: 2026-05-20 (روتين صباحي — الأربعاء)
 
 ---
 
 ## 🟡 متوسطة الأولوية
 
-### [4] XAUUSD Regime Check — Cache مفقود
+### [4] XAUUSD — `_in_trade` check قبل `_regime_check()` *(جديد 2026-05-20)*
+- **الملف:** `strategy/xauusd_signal.py:185-188`
+- **المشكلة:** `_regime_check()` تُستدعى قبل فحص `self._in_trade` → طلبان HTTP في كل دورة حتى عند وجود صفقة مفتوحة
+- **الإصلاح المقترح:**
+  ```python
+  # قبل _regime_check:
+  if self._in_trade:
+      return None
+  if not self._regime_check():
+      return None
+  ```
+- **تاريخ الاكتشاف:** 2026-05-20
+- **الحالة:** ⏳ ينتظر موافقة المستخدم (يُفضّل تطبيقه مع Cache #4b)
+
+### [4b] XAUUSD Regime Check — Cache مفقود *(منذ 2026-05-16، 4 أيام)*
 - **الملف:** `strategy/xauusd_signal.py:126`
 - **المشكلة:** `_regime_check()` تستدعي yfinance API في كل دورة (كل 15 دقيقة) بدون Cache
   - 24 طلب HTTP في جلسة NY واحدة
   - عند فشل API → fail-open (كل الصفقات مسموحة بدون فلتر)
 - **الإصلاح المقترح:** إضافة `_regime_cache` مع TTL = 3600 ثانية
 - **تاريخ الاكتشاف:** 2026-05-16
-- **الحالة:** ⏳ ينتظر موافقة المستخدم (ملف استراتيجية)
+- **الحالة:** ⏳ ينتظر موافقة المستخدم (4 أيام)
 
 ---
 
-## 🔵 منخفضة الأولوية (مراقبة)
+## 🔵 منخفضة الأولوية
 
 ### [1] ~~دقة الإغلاق الجزئي~~ — ✅ طُبّق 2026-05-17
 - **الملف:** `risk/risk_manager.py:248`
@@ -27,6 +41,13 @@
 - **الملف:** `execution/executor.py`
 - **طُبّق:** أخطاء initialize/login/order_send تُسجَّل الآن بـ `_log.error()`
 
+### [3] إضافة "strategy" key لكل Signal Generator *(منذ 2026-05-12، 8 أيام)*
+- **الملفات:** `strategy/eurusd_signal.py`, `gbpusd_signal.py`, `xauusd_signal.py`, `london_signal.py`
+- **المشكلة:** إشعار Telegram يعرض "Breakout" لكل الأزواج بدل الاسم الفعلي
+- **الإصلاح:** إضافة `"strategy": "EURUSD NY Breakout"` إلخ. في كل dict إشارة
+- **تاريخ الاكتشاف:** 2026-05-12
+- **الحالة:** 🔍 تحت المراقبة
+
 ### [5] CPI مُثبَّت يدوياً في XAUUSD
 - **الملف:** `strategy/xauusd_signal.py:150`
 - **المشكلة:** `estimated_cpi = 2.8` — قيمة ثابتة ستُصبح قديمة
@@ -34,77 +55,37 @@
 - **تاريخ الاكتشاف:** 2026-05-16
 - **الحالة:** 🔍 تحت المراقبة — أولوية منخفضة
 
-### [3] إضافة "strategy" key لكل Signal Generator
-- **الملفات:** `strategy/eurusd_signal.py`, `gbpusd_signal.py`, `xauusd_signal.py`, `london_signal.py`
-- **المشكلة:** إشعار Telegram يعرض "Breakout" لكل الأزواج بدل الاسم الفعلي
-- **الإصلاح:** إضافة `"strategy": "EURUSD NY Breakout"` إلخ. في كل dict إشارة
-- **تاريخ الاكتشاف:** 2026-05-12
-- **الحالة:** 🔍 تحت المراقبة
+### [10] SELL Break-Even Offset *(جديد 2026-05-20)*
+- **الملف:** `risk/risk_manager.py:163`
+- **المشكلة:** `new_sl = round(entry + offset, 3)` للـ SELL يضع SL فوق entry بـ 2 pips
+  - عند ضرب SL: تُغلق الصفقة بخسارة 2 pip بدل التعادل الحقيقي
+  - الأصح: `new_sl = round(entry - offset, 3)` → SL تحت entry بـ 2 pips → ربح 2 pip عند الضرب
+- **ملاحظة:** الوضع الحالي أفضل من الوضع قبل v2.1.0 — هذا تحسين نظري فقط
+- **تاريخ الاكتشاف:** 2026-05-20
+- **الحالة:** ⏳ ينتظر موافقة المستخدم (منخفضة)
 
 ---
 
-## 👁️ تحت المراقبة (جديدة — 2026-05-17)
+## 👁️ تحت المراقبة (مكتملة)
 
 ### [6] ~~Dead Code في executor.py Limit Order~~ — ✅ طُبّق 2026-05-18
-- **الملف:** `execution/executor.py`
-- **طُبّق:** حذف `ORDER_TYPE_BUY_LIMIT` الزائد + توضيح التعليقات
-
 ### [7] ~~import مكرر داخل Main Loop~~ — ✅ طُبّق 2026-05-19
-- **الملف:** `main.py:676` (سابقاً)
-- **طُبّق:** حذف `from datetime import timezone as _tz_fix` + استبدال `_tz_fix.utc` بـ `timezone.utc`
-
 ### [8] ~~print() في order validation (executor.py)~~ — ✅ طُبّق 2026-05-18
-- **الملف:** `execution/executor.py`
-- **طُبّق:** 11 print() في _execute_market_order/_execute_limit_order/_handle_result → _log.warning/info/error
-
 ### [9] ~~print() في close_position/modify_position (executor.py)~~ — ✅ طُبّق 2026-05-19
-- **الملف:** `execution/executor.py:378,412,420,464,487,491`
-- **طُبّق:** 6 print() في close_position()/modify_position() → _log.info/warning/error
-- **ملاحظة:** executor.py الآن نظيف تماماً من print() في دوال التداول الحي ✅
 
 ---
 
 ## ✅ مكتملة (للمرجع)
 
-### [E1] datetime index vs column — EURUSD/GBPUSD
-- **طُبّق:** 2026-05-12
-- **النتيجة:** الزوجان بدآ يولّدان إشارات بشكل صحيح ✅
-
-### [E2] Break-Even SELL — منطق معكوس
-- **طُبّق:** v2.1.0 (2026-05-01)
-- **النتيجة:** السطر 161 في risk_manager.py: `entry + offset` ✅
-
-### [E3] قسمة على صفر في Position Sizing
-- **طُبّق:** v2.1.0 (2026-05-01)
-- **النتيجة:** guard في السطر 73-74: `if not entry or entry == 0: return 0.01` ✅
-
-### [E4] ATR Defaults خاطئة
-- **طُبّق:** v2.1.0 (2026-05-01)
-- **النتيجة:** `_ATR_DEFAULTS` dict في trade_monitor.py ✅
-
-### [E5] signal['asia_high'] KeyError — يمنع تنفيذ EURUSD/GBPUSD/XAUUSD
-- **طُبّق:** 2026-05-12 (روتين صباحي)
-- **النتيجة:** استخدام `.get()` مع conditional line في main.py:384 ✅
-
-### [E6] LondonSignalGenerator غير مستوردة في cmd_analyze
-- **طُبّق:** 2026-05-12 (روتين صباحي)
-- **النتيجة:** استبدال بـ `get_strategy()` في main.py:523 ✅
-
-### [E7] print() في trade_monitor — الأخطاء لا تُسجَّل
-- **طُبّق:** 2026-05-12 (روتين صباحي)
-- **النتيجة:** إضافة `get_logger` واستبدال print → logger في trade_monitor.py ✅
-
-### [E8] datetime.now() Local Time بدل UTC في Main Loop
-- **طُبّق:** 2026-05-15 (روتين صباحي)
-- **التفاصيل:** 3 أسطر في main.py (620, 651, 663) تحوّلت لـ `datetime.now(timezone.utc)`
-- **النتيجة:** daily reset و heartbeat و log push تعمل الآن بتوقيت UTC بغض النظر عن timezone الـ VPS ✅
-
-### [E9] partial lots round → math.floor
-- **طُبّق:** 2026-05-17 (روتين صباحي — السبت)
-- **التفاصيل:** `risk_manager.py:248` — `round()` → `math.floor()` + إضافة `import math`
-- **النتيجة:** الإغلاق الجزئي دائماً ≤ 50% بدلاً من التقريب للأعلى ✅
-
-### [E10] MT5 أخطاء الاتصال تُسجَّل في logs
-- **طُبّق:** 2026-05-17 (روتين صباحي — السبت)
-- **التفاصيل:** `executor.py` — إضافة `_log = get_logger("executor")` + 6 print() → `_log.error/warning()`
-- **النتيجة:** أخطاء MT5 الحرجة تظهر الآن في `errors_*.log` ✅
+| # | المشكلة | التاريخ |
+|---|---------|---------|
+| E1 | datetime index vs column — EURUSD/GBPUSD | 2026-05-12 |
+| E2 | Break-Even SELL — منطق معكوس | v2.1.0 (2026-05-01) |
+| E3 | قسمة على صفر في Position Sizing | v2.1.0 (2026-05-01) |
+| E4 | ATR Defaults خاطئة | v2.1.0 (2026-05-01) |
+| E5 | signal['asia_high'] KeyError | 2026-05-12 |
+| E6 | LondonSignalGenerator غير مستوردة | 2026-05-12 |
+| E7 | print() في trade_monitor | 2026-05-12 |
+| E8 | datetime.now() Local Time بدل UTC | 2026-05-15 |
+| E9 | partial lots round → math.floor | 2026-05-17 |
+| E10 | MT5 أخطاء الاتصال تُسجَّل في logs | 2026-05-17 |
