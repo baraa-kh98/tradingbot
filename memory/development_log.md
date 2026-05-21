@@ -212,3 +212,29 @@
 - صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
 - الكود نظيف تماماً — لا مشاكل حرجة متبقية، جميع الإصلاحات المجدولة طُبّقت
 ---
+
+---
+## يوم 2026-05-21 — الروتين اليومي الصباحي (06:00 UTC) — الخميس
+
+### 🔍 مشاكل وجدناها
+1. **منخفضة (جديدة):** `strategy/xauusd_signal.py:176-180` — `datetime.now(timezone.utc)` للـ session filter بدل `self._current_hour()` (كانه EURUSD/GBPUSD)
+   - في LIVE trading: صحيح تماماً
+   - في BACKTEST إذا استُدعي `get_signal()` مباشرة: الفلتر يعتمد على وقت التشغيل الفعلي لا وقت الشمعة
+   - على الأرجح لا مشكلة لأن `xauusd_backtest.py` يمتلك فلترة خاصة (الـ 38 صفقة تُثبت ذلك)
+2. **مستمرة (5 أيام):** `strategy/xauusd_signal.py:126` — `_regime_check()` بدون Cache — تنتظر موافقة
+3. **مستمرة (1 يوم):** `strategy/xauusd_signal.py:185` — `_in_trade` بعد `_regime_check()` — تنتظر موافقة
+4. **مستمرة (1 يوم):** `risk/risk_manager.py:163` — SELL Break-Even offset — تنتظر موافقة
+5. **مستمرة (9 أيام):** إضافة "strategy" key في signal dicts — تنتظر موافقة
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف ومستقر بالكامل
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة (5 أيام):** Cache لـ `_regime_check()` + إعادة ترتيب `_in_trade` في `xauusd_signal.py` — يوصى بتطبيقهما معاً
+2. **منخفضة:** SELL Break-Even: `entry + offset` → `entry - offset` في `risk_manager.py:163`
+3. **منخفضة (9 أيام):** إضافة "strategy" key في signal dicts — لتحسين إشعارات Telegram
+
+### 📊 أداء اليوم
+- صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
+- ملاحظة اليوم: اكتشاف inconsistency بين XAUUSD (real-time clock) وبقية الاستراتيجيات (candle index) للـ session filter
+---
