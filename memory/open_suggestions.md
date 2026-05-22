@@ -1,17 +1,16 @@
 # اقتراحات مفتوحة — قيد الدراسة
 
-> آخر تحديث: 2026-05-21 (روتين صباحي — الخميس)
+> آخر تحديث: 2026-05-22 (روتين صباحي — الجمعة)
 
 ---
 
 ## 🟡 متوسطة الأولوية
 
-### [4] XAUUSD — `_in_trade` check قبل `_regime_check()` *(جديد 2026-05-20)*
+### [4] XAUUSD — `_in_trade` check قبل `_regime_check()` *(2026-05-20، 3 أيام)*
 - **الملف:** `strategy/xauusd_signal.py:185-188`
 - **المشكلة:** `_regime_check()` تُستدعى قبل فحص `self._in_trade` → طلبان HTTP في كل دورة حتى عند وجود صفقة مفتوحة
 - **الإصلاح المقترح:**
   ```python
-  # قبل _regime_check:
   if self._in_trade:
       return None
   if not self._regime_check():
@@ -20,33 +19,31 @@
 - **تاريخ الاكتشاف:** 2026-05-20
 - **الحالة:** ⏳ ينتظر موافقة المستخدم (يُفضّل تطبيقه مع Cache #4b)
 
-### [4b] XAUUSD Regime Check — Cache مفقود *(منذ 2026-05-16، 4 أيام)*
+### [4b] XAUUSD Regime Check — Cache مفقود *(منذ 2026-05-16، 6 أيام)*
 - **الملف:** `strategy/xauusd_signal.py:126`
 - **المشكلة:** `_regime_check()` تستدعي yfinance API في كل دورة (كل 15 دقيقة) بدون Cache
   - 24 طلب HTTP في جلسة NY واحدة
   - عند فشل API → fail-open (كل الصفقات مسموحة بدون فلتر)
 - **الإصلاح المقترح:** إضافة `_regime_cache` مع TTL = 3600 ثانية
 - **تاريخ الاكتشاف:** 2026-05-16
-- **الحالة:** ⏳ ينتظر موافقة المستخدم (4 أيام)
+- **الحالة:** ⏳ ينتظر موافقة المستخدم (**6 أيام** ← يُوصى بالتطبيق هذا الأسبوع)
 
 ---
 
 ## 🔵 منخفضة الأولوية
 
 ### [1] ~~دقة الإغلاق الجزئي~~ — ✅ طُبّق 2026-05-17
-- **الملف:** `risk/risk_manager.py:248`
-- **طُبّق:** `math.floor(lots * self.partial_tp_ratio * 100) / 100`
-
 ### [2] ~~MT5 Connection Error Handling~~ — ✅ طُبّق 2026-05-17
-- **الملف:** `execution/executor.py`
-- **طُبّق:** أخطاء initialize/login/order_send تُسجَّل الآن بـ `_log.error()`
+### [10] ~~SELL Break-Even Offset~~ — ✅ **طُبّق 2026-05-22**
+- **الملف:** `risk/risk_manager.py:163`
+- **الإصلاح:** `entry + offset` → `entry - offset` (SL تحت entry = ربح 2 pip عند الضرب)
 
-### [3] إضافة "strategy" key لكل Signal Generator *(منذ 2026-05-12، 8 أيام)*
+### [3] إضافة "strategy" key لكل Signal Generator *(منذ 2026-05-12، 10 أيام)*
 - **الملفات:** `strategy/eurusd_signal.py`, `gbpusd_signal.py`, `xauusd_signal.py`, `london_signal.py`
 - **المشكلة:** إشعار Telegram يعرض "Breakout" لكل الأزواج بدل الاسم الفعلي
 - **الإصلاح:** إضافة `"strategy": "EURUSD NY Breakout"` إلخ. في كل dict إشارة
 - **تاريخ الاكتشاف:** 2026-05-12
-- **الحالة:** 🔍 تحت المراقبة
+- **الحالة:** ⏳ ينتظر موافقة المستخدم (10 أيام)
 
 ### [5] CPI مُثبَّت يدوياً في XAUUSD
 - **الملف:** `strategy/xauusd_signal.py:150`
@@ -55,33 +52,25 @@
 - **تاريخ الاكتشاف:** 2026-05-16
 - **الحالة:** 🔍 تحت المراقبة — أولوية منخفضة
 
-### [10] SELL Break-Even Offset *(جديد 2026-05-20)*
-- **الملف:** `risk/risk_manager.py:163`
-- **المشكلة:** `new_sl = round(entry + offset, 3)` للـ SELL يضع SL فوق entry بـ 2 pips
-  - عند ضرب SL: تُغلق الصفقة بخسارة 2 pip بدل التعادل الحقيقي
-  - الأصح: `new_sl = round(entry - offset, 3)` → SL تحت entry بـ 2 pips → ربح 2 pip عند الضرب
-- **ملاحظة:** الوضع الحالي أفضل من الوضع قبل v2.1.0 — هذا تحسين نظري فقط
-- **تاريخ الاكتشاف:** 2026-05-20
-- **الحالة:** ⏳ ينتظر موافقة المستخدم (منخفضة)
-
-### [11] XAUUSD — datetime.now() vs candle index للـ session filter *(جديد 2026-05-21)*
-- **الملف:** `strategy/xauusd_signal.py:176-180`
-- **المشكلة:** XAUUSD تستخدم `datetime.now(timezone.utc)` للـ session filter، بينما EURUSD/GBPUSD تستخدمان `self._current_hour()` (ساعة آخر شمعة)
-  - في LIVE trading: صحيح تماماً
-  - في BACKTEST إذا استُدعي `get_signal()` مباشرةً: الفلتر يعتمد على وقت التشغيل الفعلي لا وقت الشمعة → ينجح backtest فقط إذا شُغِّل بين 13-16 UTC
-- **خطورة:** منخفضة (live OK، backtest script على الأرجح يمتلك فلترة خاصة)
-- **التوصية:** عند أي تعديل على `xauusd_backtest.py`، تحقق من أنه لا يستدعي `get_signal()` مباشرةً
-- **تاريخ الاكتشاف:** 2026-05-21
-- **الحالة:** 🔍 تحت المراقبة
-
 ---
 
-## 👁️ تحت المراقبة (مكتملة)
+## 👁️ تحت المراقبة
 
-### [6] ~~Dead Code في executor.py Limit Order~~ — ✅ طُبّق 2026-05-18
-### [7] ~~import مكرر داخل Main Loop~~ — ✅ طُبّق 2026-05-19
-### [8] ~~print() في order validation (executor.py)~~ — ✅ طُبّق 2026-05-18
-### [9] ~~print() في close_position/modify_position (executor.py)~~ — ✅ طُبّق 2026-05-19
+### [11] XAUUSD — datetime.now() vs candle index للـ session filter *(2026-05-21)*
+- **الملف:** `strategy/xauusd_signal.py:176-180`
+- **خطورة:** منخفضة (live OK، backtest script على الأرجح يمتلك فلترة خاصة)
+- **التوصية:** عند أي تعديل على `xauusd_backtest.py`، تحقق من أنه لا يستدعي `get_signal()` مباشرةً
+- **الحالة:** 🔍 تحت المراقبة
+
+### [12] تأثير يوم الجمعة على الأداء *(جديد 2026-05-22)*
+- **الموضوع:** خطر Weekend Gap لأي صفقة مفتوحة بعد 15:00 UTC يوم الجمعة
+- **الأزواج الأكثر تأثراً:** XAUUSD (Regime Filter قد يُبطئ الإشارات) + EURUSD/GBPUSD (TP بعيد للجلسة القصيرة)
+- **متى نقرر؟:** بعد 4 أجمعة مراقبة أو 3 صفقات جمعة
+- **الحالة:** 🔍 تحت المراقبة
+
+### [13] print() في connect()/disconnect() — executor.py *(مستمر)*
+- **الملف:** `execution/executor.py:67-118`
+- **الحالة:** 🔍 للـ Refactoring الشامل مستقبلاً
 
 ---
 
@@ -90,7 +79,7 @@
 | # | المشكلة | التاريخ |
 |---|---------|---------|
 | E1 | datetime index vs column — EURUSD/GBPUSD | 2026-05-12 |
-| E2 | Break-Even SELL — منطق معكوس | v2.1.0 (2026-05-01) |
+| E2 | Break-Even SELL — منطق معكوس (v1) | v2.1.0 (2026-05-01) |
 | E3 | قسمة على صفر في Position Sizing | v2.1.0 (2026-05-01) |
 | E4 | ATR Defaults خاطئة | v2.1.0 (2026-05-01) |
 | E5 | signal['asia_high'] KeyError | 2026-05-12 |
@@ -99,3 +88,8 @@
 | E8 | datetime.now() Local Time بدل UTC | 2026-05-15 |
 | E9 | partial lots round → math.floor | 2026-05-17 |
 | E10 | MT5 أخطاء الاتصال تُسجَّل في logs | 2026-05-17 |
+| E11 | order validation print → logger | 2026-05-18 |
+| E12 | Dead code BUY_LIMIT overwrite | 2026-05-18 |
+| E13 | close/modify print → logger | 2026-05-19 |
+| E14 | duplicate import داخل main loop | 2026-05-19 |
+| **E15** | **SELL Break-Even: entry+offset → entry-offset (2 pip offset)** | **2026-05-22** |

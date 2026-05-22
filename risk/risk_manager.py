@@ -160,7 +160,7 @@ class RiskManager:
             current_profit = entry - current_price
             trigger = risk * self.breakeven_trigger_rr
             if current_profit >= trigger and stop_loss > entry:
-                new_sl = round(entry + offset, 3)  # SL فوق entry لحماية صفقة البيع
+                new_sl = round(entry - offset, 3)  # SL تحت entry بـ offset → ربح عند الضرب
                 return True, new_sl
 
         return False, stop_loss

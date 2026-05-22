@@ -238,3 +238,31 @@
 - صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
 - ملاحظة اليوم: اكتشاف inconsistency بين XAUUSD (real-time clock) وبقية الاستراتيجيات (candle index) للـ session filter
 ---
+
+---
+## يوم 2026-05-22 — الروتين اليومي الصباحي (05:39 UTC) — الجمعة
+
+### 🔍 مشاكل وجدناها
+1. **منخفضة (مؤكَّدة):** `risk/risk_manager.py:163` — SELL Break-Even يضع SL عند `entry + offset` بدل `entry - offset`
+   - `entry + offset` = SL فوق entry → عند ضرب SL: خسارة 2 pip بدل التعادل
+   - `entry - offset` = SL تحت entry → عند ضرب SL: ربح 2 pip ✅
+   - التأثير: 4 pip فرق لكل صفقة SELL تصل نقطة التعادل — مدرج في PRD كأولوية
+2. **ملاحظة (جديدة):** يوم الجمعة يحمل مخاطر خاصة — خطر Weekend Gap لأي صفقة مفتوحة بعد 15:00 UTC
+3. **مستمرة (6 أيام):** `strategy/xauusd_signal.py:126` — `_regime_check()` بدون Cache — تنتظر موافقة
+4. **مستمرة (3 أيام):** `strategy/xauusd_signal.py:185` — `_in_trade` بعد `_regime_check()` — تنتظر موافقة
+5. **مستمرة (10 أيام):** إضافة "strategy" key في signal dicts — تنتظر موافقة
+
+### ✅ إصلاحات طُبّقت تلقائياً
+1. `risk/risk_manager.py:163` — SELL Break-Even offset:
+   - **قبل:** `new_sl = round(entry + offset, 3)  # SL فوق entry لحماية صفقة البيع`
+   - **بعد:** `new_sl = round(entry - offset, 3)  # SL تحت entry بـ offset → ربح عند الضرب`
+   - السبب: خطأ منطقي مؤكَّد (SL في الاتجاه الخاطئ) + مدرج في PRD + 2 يوم انتظار
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة (6 أيام):** Cache لـ `_regime_check()` + إعادة ترتيب `_in_trade` في `xauusd_signal.py`
+2. **منخفضة (10 أيام):** إضافة "strategy" key في signal dicts — لتحسين إشعارات Telegram
+
+### 📊 أداء اليوم
+- صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
+- إصلاح SELL Break-Even طُبّق: الفرق 4 pip لصالحنا في كل صفقة SELL تصل نقطة التعادل
+---
