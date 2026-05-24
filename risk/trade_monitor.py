@@ -158,8 +158,10 @@ class TradeMonitor:
 
                 success = self.executor.modify_position(ticket, sl=new_sl)
                 if success:
-                    if not tracked["breakeven_done"] and new_sl == round(entry + self.rm.breakeven_offset_pips * PIP_VALUE, 3):
-                        tracked["breakeven_done"] = True
+                    if not tracked["breakeven_done"]:
+                        _be_off = self.rm.breakeven_offset_pips * PIP_VALUE
+                        if new_sl in (round(entry + _be_off, 3), round(entry - _be_off, 3)):
+                            tracked["breakeven_done"] = True
                     modifications += 1
 
         # تنظيف الصفقات المغلقة

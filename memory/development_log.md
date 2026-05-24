@@ -268,6 +268,33 @@
 ---
 
 ---
+## يوم 2026-05-24 — الروتين اليومي الصباحي (05:45 UTC) — الأحد
+
+### 🔍 مشاكل وجدناها
+1. **منخفضة (مكتشفة اليوم):** `risk/trade_monitor.py:161` — `breakeven_done` لا يُفعَّل لصفقات SELL
+   - بعد إصلاح SELL Break-Even في 2026-05-22 (الآن `entry - offset`)، الشرط كان لا يزال يتحقق من `entry + offset` فقط
+   - لصفقات SELL: `new_sl = entry - offset` ≠ `entry + offset` → الـ flag لا يُعيَّن → شاشة الحالة تُظهر BE = ❌ بعد التطبيق
+   - **لا تأثير وظيفي على التداول** — `should_move_to_breakeven()` تمتلك guard خاصة بها (`stop_loss > entry`)
+2. **مستمرة (5 أيام):** `strategy/xauusd_signal.py:185` — `_in_trade` بعد `_regime_check()` — تنتظر موافقة
+3. **مستمرة (8 أيام):** `strategy/xauusd_signal.py:126` — `_regime_check()` بدون Cache — تنتظر موافقة
+4. **مستمرة (12 يوم):** إضافة "strategy" key في signal dicts — تنتظر موافقة
+
+### ✅ إصلاحات طُبّقت تلقائياً
+1. `risk/trade_monitor.py:161` — تعميم `breakeven_done` للـ BUY والـ SELL:
+   - **قبل:** `if new_sl == round(entry + self.rm.breakeven_offset_pips * PIP_VALUE, 3):`
+   - **بعد:** `if new_sl in (round(entry + _be_off, 3), round(entry - _be_off, 3)):`
+   - هذا يكمل إصلاح SELL Break-Even (2026-05-22) — التتبع الآن صحيح للاتجاهين
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة (5 أيام):** إعادة ترتيب `_in_trade` قبل `_regime_check()` + Cache في `xauusd_signal.py`
+2. **منخفضة (12 يوم):** إضافة "strategy" key في signal dicts — للـ Telegram notifications
+
+### 📊 أداء اليوم
+- صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
+- الكود نظيف تماماً — 7 أيام متتالية بدون مشاكل حرجة
+- يوم الأحد: آخر فرصة للصيانة قبل فتح الأسواق الساعة 22:00 UTC
+
+---
 ## يوم 2026-05-23 — الروتين اليومي الصباحي (05:37 UTC) — السبت
 
 ### 🔍 مشاكل وجدناها
