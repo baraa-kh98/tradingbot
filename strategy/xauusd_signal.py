@@ -30,6 +30,9 @@ import pandas as pd
 from typing import Optional, Dict, Any
 
 from strategy.base_strategy import BaseStrategy
+from utils.logger import get_logger
+
+_log = get_logger("xauusd_signal")
 
 
 class XAUUSDSignalGenerator(BaseStrategy):
@@ -157,8 +160,7 @@ class XAUUSDSignalGenerator(BaseStrategy):
             return False  # No favorable regime detected
 
         except Exception as e:
-            # On error, allow trade (fail-open to avoid blocking legitimate signals)
-            # Log warning but don't block trading
+            _log.warning(f"_regime_check error (fail-open): {e}")
             return True
 
     # ── Signal Generation ─────────────────────────────────────

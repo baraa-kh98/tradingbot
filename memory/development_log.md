@@ -393,3 +393,33 @@
 - تنبيه الأسبوع: Core PCE الخميس 28 مايو (12:30 UTC) — المحرك الرئيسي للدولار
 - توصية: شغّل `london_optimizer.py` + `gbpusd_finetune.py` قبل الخميس
 ---
+
+---
+## يوم 2026-05-28 — الروتين اليومي الصباحي (06:10 UTC) — الخميس (Core PCE Day)
+
+### 🔍 مشاكل وجدناها
+1. **مُصلحة اليوم:** `strategy/xauusd_signal.py:159-163` — Exception في `_regime_check()` بدون logging
+   - التعليق كان يقول "Log warning" لكن لا يوجد `_log.warning()` فعلي — مدرجة صراحةً في PRD كأولوية
+   - اليوم Core PCE → yfinance API تحت ضغط → يجب معرفة أي فشل في الشبكة فوراً
+2. **مستمرة (12 يوم):** `strategy/xauusd_signal.py:126` — `_regime_check()` بدون Cache — تنتظر موافقة
+3. **مستمرة (9 أيام):** `strategy/xauusd_signal.py:185` — `_in_trade` بعد `_regime_check()` — تنتظر موافقة
+4. **مستمرة (16 يوم):** إضافة "strategy" key في signal dicts — الأقدم في القائمة
+5. **تنبيه خارجي:** Core PCE الخميس 28 مايو 12:30 UTC — أهم حدث التضخم للـ Fed هذا الأسبوع
+
+### ✅ إصلاحات طُبّقت تلقائياً
+1. `strategy/xauusd_signal.py:159-163` — إضافة exception logging لـ `_regime_check()`:
+   - **قبل:** `except Exception as e: return True  # (بدون logging)`
+   - **بعد:** `except Exception as e: _log.warning(f"_regime_check error (fail-open): {e}"); return True`
+   - إضافة: `from utils.logger import get_logger` + `_log = get_logger("xauusd_signal")` في أعلى الملف
+   - الآن أخطاء yfinance/شبكة تُسجَّل في `errors_YYYY-MM-DD.log` — تكملة نهج logging الموحّد
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة (12 يوم):** Cache لـ `_regime_check()` في `xauusd_signal.py:126` — ESCALATED اليوم
+2. **متوسطة (9 أيام):** إعادة ترتيب `_in_trade` قبل `_regime_check()` في `xauusd_signal.py:185`
+3. **منخفضة (16 يوم):** إضافة "strategy" key في signal dicts — الأقدم في القائمة
+
+### 📊 أداء اليوم
+- صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
+- حدث مهم: Core PCE 12:30 UTC — إذا PCE > 2.6% → VIX > 24 → أول إشارة XAUUSD حقيقية
+- الكود نظيف — 17 إصلاح تراكمي منذ 2026-05-12
+---
