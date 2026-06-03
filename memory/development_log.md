@@ -550,3 +550,33 @@
 - تنبيه: ISM PMI 14:00 UTC اليوم — راقب إشارات EURUSD/GBPUSD قبل الرقم
 - أولوية هذا الأسبوع: [A]+[B]+[C] + london_optimizer.py + gbpusd_finetune.py
 ---
+
+---
+## يوم 2026-06-03 — الروتين اليومي الصباحي (05:40 UTC) — الأربعاء (أسبوع NFP | ADP + ISM اليوم | NFP الجمعة)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **18 يوماً متتالياً** (رقم قياسي جديد)
+2. **مستمرة (18 يوم ← CRITICAL RECORD):** `strategy/xauusd_signal.py` — `_regime_check()` بدون Cache — أطول انتظار في كل السجل
+3. **مستمرة (18 يوم):** `strategy/xauusd_signal.py` — `_in_trade` بعد `_regime_check()` — تنتظر موافقة
+4. **مستمرة (22 يوم ← الأقدم في السجل):** إضافة "strategy" key في signal dicts — تنتظر موافقة
+5. **مستمرة:** `strategy/xauusd_signal.py` — `from datetime import datetime, timedelta` داخل `_regime_check()` — dead import يُحذف مع [A]
+6. **تحذير أسبوعي (اليوم):** ADP National Employment ~12:15 UTC — محرك USD قوي قبل جلسة NY
+7. **تحذير أسبوعي (اليوم):** ISM Services PMI ~14:00 UTC — لا دخول في نافذة 13:45-14:15 UTC
+8. **تحذير أسبوعي (الجمعة):** NFP 5 يونيو 12:30 UTC — لا تداول EURUSD/GBPUSD في نافذة NY الجمعة
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (18 يوم متتالي بدون مشاكل حرجة — رقم قياسي جديد)
+- مراجعة كاملة: eurusd_signal.py ✅ | gbpusd_signal.py ✅ | london_signal.py ✅ | risk_manager.py ✅ | trade_monitor.py ✅
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة (18 يوم) — CRITICAL RECORD:** Cache لـ `_regime_check()` في `xauusd_signal.py` — غداً الخميس آخر فرصة قبل NFP
+2. **متوسطة (18 يوم) — ESCALATED:** إعادة ترتيب `_in_trade` قبل `_regime_check()` في `xauusd_signal.py` — سطران فقط
+3. **منخفضة (22 يوم ← الأقدم في السجل):** إضافة "strategy" key في signal dicts — 4 ملفات، 10 دقائق
+4. **أسبوعية:** تشغيل `london_optimizer.py` + `gbpusd_finetune.py` — اليوم أو غداً الخميس
+
+### 📊 أداء اليوم
+- صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
+- تحذير اليوم: ADP 12:15 UTC + ISM Services ~14:00 UTC — أكثر أيام هذا الأسبوع بيانات (ما عدا الجمعة)
+- تحذير الجمعة: NFP 5 يونيو 12:30 UTC — الحدث الأكبر هذا الأسبوع
+- الكود نظيف — 20+ إصلاح تراكمي منذ 2026-05-12 | 18 يوم بدون أي مشكلة حرجة
+---
