@@ -580,3 +580,32 @@
 - تحذير الجمعة: NFP 5 يونيو 12:30 UTC — الحدث الأكبر هذا الأسبوع
 - الكود نظيف — 20+ إصلاح تراكمي منذ 2026-05-12 | 18 يوم بدون أي مشكلة حرجة
 ---
+
+---
+## يوم 2026-06-04 — الروتين اليومي الصباحي (05:38 UTC) — الخميس (NFP Eve | Jobless Claims اليوم | NFP الجمعة)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **19 يوماً متتالياً** (رقم قياسي جديد)
+2. **مستمرة (19 يوم ← CRITICAL RECORD):** `strategy/xauusd_signal.py:129` — `_regime_check()` بدون Cache — أطول انتظار في كل السجل
+3. **مستمرة (19 يوم):** `strategy/xauusd_signal.py:186` — `_in_trade` بعد `_regime_check()` — تنتظر موافقة
+4. **مستمرة (23 يوم ← الأقدم في تاريخ البوت كله):** إضافة "strategy" key في signal dicts — تنتظر موافقة
+5. **مستمرة:** `strategy/xauusd_signal.py:136` — `from datetime import datetime, timedelta` داخل `_regime_check()` — dead import يُحذف مع [A]
+6. **تحذير خارجي (اليوم):** US Jobless Claims ~12:30 UTC — محرك USD أسبوعي — خطر على إشارات EURUSD/GBPUSD في NY
+7. **تحذير خارجي (غداً):** NFP 5 يونيو 12:30 UTC — لا تداول EURUSD/GBPUSD في نافذة NY يوم الجمعة
+8. **سياق ماكرو:** ADP + ISM Services صدرا أمس (يونيو 3) — السوق يهضمهما ويتأهب للـ NFP
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (19 يوم متتالي — رقم قياسي جديد)
+- مراجعة كاملة: eurusd_signal.py ✅ | gbpusd_signal.py ✅ | london_signal.py ✅ | risk_manager.py ✅ | trade_monitor.py ✅ | xauusd_signal.py ✅
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة (19 يوم) — CRITICAL RECORD:** Cache لـ `_regime_check()` في `xauusd_signal.py:129` — **اليوم آخر فرصة قبل NFP**
+2. **متوسطة (19 يوم) — ESCALATED:** إعادة ترتيب `_in_trade` قبل `_regime_check()` في `xauusd_signal.py:186` — سطران فقط
+3. **منخفضة (23 يوم ← الأقدم في تاريخ البوت):** إضافة "strategy" key في signal dicts — 4 ملفات، 10 دقائق
+4. **أسبوعية (السبت/الأحد):** تشغيل `london_optimizer.py` + `gbpusd_finetune.py` — بعد NFP
+
+### 📊 أداء اليوم
+- صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
+- NFP Eve — أهم قرار اليوم: تطبيق [A]+[B]+[C] قبل NFP الجمعة
+- الكود نظيف — 20+ إصلاح تراكمي منذ 2026-05-12 | 19 يوم بدون أي مشكلة حرجة
+---
