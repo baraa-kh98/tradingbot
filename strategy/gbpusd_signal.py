@@ -35,7 +35,7 @@ class GBPUSDSignalGenerator(BaseStrategy):
     SESSION_END_H  = 15    # نهاية نافذة التداول
     MIN_RANGE_PIPS = 60    # أدنى حجم range (GBP أكثر تقلباً من EUR)
     ATR_SL         = 1.8   # SL = 1.8 × ATR
-    MIN_RR         = 3.0   # TP = 3.0 × risk
+    MIN_RR         = 4.0   # TP = 4.0 × risk (finetune 2026-06-06: 3.0→4.0, Sharpe 1.224→1.270)
     ATR_PERIOD     = 14
     PIP            = 0.0001
 

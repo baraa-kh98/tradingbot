@@ -637,3 +637,47 @@
 - NFP Day — الحدث الأكبر هذا الأسبوع | لا تداول EURUSD/GBPUSD NY | USDJPY London الوحيدة الآمنة
 - الكود نظيف — 20+ إصلاح تراكمي منذ 2026-05-12 | **20 يوم متتالي بدون أي مشكلة حرجة — رقم قياسي مطلق**
 ---
+
+---
+## يوم 2026-06-06 — السبت | يوم التطوير
+
+### 🔍 مشاكل وجدناها
+- لا مشاكل حرجة جديدة — يوم 21 نظيف (رقم قياسي مطلق جديد)
+- [A] xauusd_signal.py:129 — Regime Check بدون Cache (21 يوم معلّق)
+- [B] xauusd_signal.py:186 — _regime_check() قبل _in_trade (21 يوم معلّق)
+- [C] strategy/*.py — "strategy" key مفقود من signal dicts (25 يوم معلّق)
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- **strategy/gbpusd_signal.py:38** — MIN_RR: 3.0 → 4.0
+  - السبب: gbpusd_finetune.py أثبت تحسّن Sharpe 1.224 → 1.270 (+0.046)
+  - Return: +19.1% → +23.5% | Max DD: -7.1% (ثابت) | Trades: 41 → 38
+  - الملاحظة: لا يزال أقل من الهدف 1.5 — يحتاج تحسيناً إضافياً
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. [CRITICAL — 21 يوم] [A] Cache لـ _regime_check() — xauusd_signal.py:129 (أولوية: عالية)
+2. [21 يوم] [B] swap _in_trade قبل _regime_check() — xauusd_signal.py:186 (2 سطر)
+3. [25 يوم ← الأقدم] [C] "strategy" key — 4 ملفات (10 دقائق)
+4. [جديد] USDJPY london_optimizer — نتيجة قيد الانتظار
+
+### 📊 نتائج Backtests اليوم
+- GBPUSD finetune: Sharpe 1.224 → 1.270 | Return +19.1% → +23.5% | MIN_RR 3.0 → 4.0 ✅ طُبّق
+- USDJPY london_optimizer: ⏳ جارٍ — انتظر النتيجة
+
+### 📊 أداء اليوم
+- صفقات: 0 (السبت — سوق مغلق) | Win Rate: N/A | P&L: $0
+---
+
+### 📊 نتائج Backtests — تحديث 2026-06-06
+#### GBPUSD finetune — ✅ طُبّق
+- Params: MIN_RR 3.0 → 4.0
+- Old: Sharpe=1.224 | Return=+19.1% | DD=-7.1% | T=41
+- New: Sharpe=1.270 | Return=+23.5% | DD=-7.1% | T=38
+- Decision: ✅ Applied to strategy/gbpusd_signal.py:38
+
+#### USDJPY london_optimizer — ❌ لا تغيير
+- Grid Search: 108 تركيبة
+- Best found: Sharpe=0.96 (buffer=3, rr=3.0, min_range=40, adx=0)
+- Current baseline: Sharpe=0.97 — الحالي أفضل!
+- London Pro V2: Sharpe=-0.51 — فشل ذريع
+- Decision: ❌ لا تعديل — الباراميترات الحالية هي الأمثل
+- ملاحظة: فجوة USDJPY لا تُحل بالتونينق — تحتاج دراسة استراتيجية مختلفة
