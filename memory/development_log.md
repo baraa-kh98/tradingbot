@@ -824,3 +824,57 @@
 - الخميس — اليوم الرابع من أسبوع ما بعد NFP — US Jobless Claims محتمل 12:30 UTC
 - الكود نظيف — 20+ إصلاح تراكمي منذ 2026-05-12 | **26 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق جديد**
 ---
+
+---
+## يوم 2026-06-12 — الروتين اليومي الصباحي (06:15 UTC) — الجمعة (آخر يوم تداول | يوم 27 نظيف ← رقم قياسي مطلق جديد | gold_finetune يعمل الآن)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **27 يوماً متتالياً** ← رقم قياسي مطلق جديد
+2. **توثيق مستمر [D] (4 يوم):** `strategy/gbpusd_signal.py:5-17` — Docstring يقول `Sharpe=1.224 | min_rr=3.0` لكن الفعلي `MIN_RR=4.0, Sharpe=1.270` — لا تأثير وظيفي
+3. **مستمرة [A] (27 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:129` — `_regime_check()` بدون Cache — 96 طلب HTTP/يوم بدون داعٍ
+4. **مستمرة [B] (27 يوم):** `strategy/xauusd_signal.py:187` — `_regime_check()` تُستدعى قبل `_in_trade` (L190) — تأكيد السطور اليوم: CONFIRMED
+5. **مستمرة [C] (31 يوم ← الأقدم في تاريخ البوت كله):** إضافة "strategy" key في signal dicts — تنتظر موافقة
+6. **مستمرة:** `strategy/xauusd_signal.py:136` — `from datetime import datetime, timedelta` — dead import يُحذف مع [A]
+7. **سياق الجمعة:** UMich Consumer Sentiment محتمل 14:00 UTC (الجمعة الثانية من الشهر) — داخل نافذة NY Breakout مباشرة
+8. **Weekend Gap Risk:** أي صفقة مفتوحة بعد 15:30 UTC اليوم تواجه فجوة نهاية الأسبوع
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (27 يوم متتالي — رقم قياسي مطلق جديد)
+- مراجعة كاملة: eurusd_signal.py ✅ | gbpusd_signal.py ✅ (MIN_RR=4.0) | london_signal.py ✅ | risk_manager.py ✅ | trade_monitor.py ✅ | xauusd_signal.py ✅
+
+### 🟢 gold_finetune.py — شُغِّل اليوم (متأخر 5 أيام)
+- **التاريخ:** 2026-06-12 06:15 UTC
+- **الحالة:** يعمل الآن — 625 تركيبة على XAUUSD H1
+- **نماذج أولية (قيد المعالجة):**
+  - n=25 adx=18 sl=1.8 rr=1.8 → T=430 WR=41.2% Ret=25.6% Sh=0.779
+  - n=25 adx=25 sl=1.8 rr=2.5 → T=291 WR=34.4% Ret=20.9% Sh=0.620
+- **النتيجة النهائية:** ستُضاف في تحديث لاحق اليوم
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [A] (27 يوم) — رقم قياسي مطلق:** Cache لـ `_regime_check()` في `xauusd_signal.py:129`
+2. **عالية [B] (27 يوم) — ESCALATED:** إعادة ترتيب `_in_trade` قبل `_regime_check()` في `xauusd_signal.py:187`
+3. **منخفضة [C] (31 يوم ← الأقدم في تاريخ البوت):** إضافة "strategy" key في signal dicts
+4. **منخفضة [D] (4 يوم):** تحديث Docstring في `gbpusd_signal.py:5-17` — 2 دقيقة
+
+### 📊 أداء اليوم
+- صفقات: 0 (لا logs — البوت غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: $0
+- الجمعة — آخر يوم تداول — Weekend Gap Risk من 15:30 UTC
+- الكود نظيف — 20+ إصلاح تراكمي منذ 2026-05-12 | **27 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق جديد**
+---
+
+### 📊 نتائج gold_finetune — تحديث 2026-06-12
+
+#### XAUUSD gold_finetune — ❌ لا تغيير (Production أفضل)
+- **التاريخ:** 2026-06-12 06:30 UTC (متأخر 5 أيام عن الجدول)
+- **H1 — 625 تركيبة:**
+  - Best: n=20 adx=20 sl=2.5 rr=3.0 → Sh=1.046 T=241 WR=32.4% Ret=50.62% DD=-9.76%
+  - #5 (= Production params بدون Regime Filter): n=35 adx=25 sl=1.5 rr=2.5 → Sh=1.201
+- **M15 — 108 تركيبة:**
+  - Best: n=100 adx=22 sl=2.5 rr=3.0 → Sh=0.933 T=489 WR=31.5% Ret=32.23% DD=-10.74%
+- **المقارنة:**
+  - Finetune Winner (بدون Regime Filter): Sharpe=1.046
+  - Production params (بدون Regime Filter): Sharpe=1.201
+  - Production (مع Regime Filter — التطبيق الفعلي): Sharpe=1.31
+- **القرار:** ❌ لا تغيير — الباراميترات الحالية (nbar=35, adx=28, sl=1.5, rr=2.5 + Regime Filter) أفضل بكثير
+- **التوصية:** مسار التحسين يجب أن يركّز على فلتر Regime أو نافذة زمنية مختلفة، لا على Parameter Tuning
+- **💡 فرصة مستقبلية:** اختبار params الفائزة (n=20, adx=20) WITH Regime Filter — قد تتجاوز Sharpe=1.31
