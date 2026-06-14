@@ -910,3 +910,36 @@
 - الكود نظيف — 20+ إصلاح تراكمي منذ 2026-05-12 | **28 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق جديد**
 - gold_finetune مكتملة (قرار: ❌ لا تغيير) | المسار القادم: اختبار Regime Filter مع params مختلفة
 ---
+
+---
+## يوم 2026-06-14 — الروتين اليومي الصباحي (05:45 UTC) — الأحد (يوم 29 نظيف ← رقم قياسي مطلق جديد | سوق مغلق | أسبوع FOMC)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **29 يوماً متتالياً** ← رقم قياسي مطلق جديد
+2. **مستمرة [A] (29 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:129` — `_regime_check()` بدون Cache — 96 طلب HTTP/يوم بدون داعٍ
+3. **مستمرة [B] (29 يوم):** `strategy/xauusd_signal.py:187` — `_regime_check()` تُستدعى قبل `_in_trade` (L190) — تأكيد السطور: CONFIRMED
+4. **مستمرة [C] (33 يوم ← الأقدم في تاريخ البوت كله):** إضافة "strategy" key في signal dicts — تنتظر موافقة
+5. **مستمرة [D] (6 يوم):** `strategy/gbpusd_signal.py:5-17` — Docstring يقول `Sharpe=1.224 | min_rr=3.0` لكن الفعلي `MIN_RR=4.0, Sharpe=1.270` — لا تأثير وظيفي
+6. **مستمرة:** `strategy/xauusd_signal.py:136` — `from datetime import datetime, timedelta` — dead import يُحذف مع [A]
+7. **سياق الأحد:** سوق Forex مغلق — يفتح ~22:00 UTC مع Sydney open — راقب Weekend Gap على XAUUSD
+8. **⚠️ تحذير أسبوعي:** FOMC الأربعاء 18 يونيو — إعلان الفيدرالي الأهم هذا الشهر (18:00 UTC) — تأثير على كل الأزواج
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (29 يوم متتالي — رقم قياسي مطلق جديد)
+- مراجعة كاملة: eurusd_signal.py ✅ | gbpusd_signal.py ✅ (MIN_RR=4.0) | london_signal.py ✅ | risk_manager.py ✅ | trade_monitor.py ✅ | xauusd_signal.py ✅
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [A] (29 يوم) — رقم قياسي مطلق:** Cache لـ `_regime_check()` في `xauusd_signal.py:129`
+2. **عالية [B] (29 يوم) — ESCALATED:** إعادة ترتيب `_in_trade` قبل `_regime_check()` في `xauusd_signal.py:187` — سطران فقط
+3. **منخفضة [C] (33 يوم ← الأقدم في تاريخ البوت):** إضافة "strategy" key في signal dicts — 4 ملفات، 10 دقائق
+4. **منخفضة [D] (6 يوم):** تحديث Docstring في `gbpusd_signal.py:5-17` — 2 دقيقة
+5. **جديد (هذا الأسبوع):** اختبار n=20/adx=20 مع Regime Filter على XAUUSD (30-45 دقيقة) — احتمال تجاوز Sharpe=1.31
+6. **جديد (هذا الأسبوع):** دراسة USDJPY alternative strategy — ICT Order Blocks أو Mean Reversion (3-4 ساعات)
+7. **جديد (تحليل اليوم):** FOMC Day Filter لـ EURUSD/GBPUSD (17:50-18:30 UTC) — يحتاج backtest للتحقق
+
+### 📊 أداء اليوم
+- صفقات: 0 (الأحد — سوق مغلق) | Win Rate: N/A | P&L: $0
+- سوق يفتح الليلة ~22:00 UTC | راقب Weekend Gap على XAUUSD
+- ⚠️ أسبوع FOMC — الأربعاء 18 يونيو الحدث الأبرز هذا الشهر
+- الكود نظيف — 20+ إصلاح تراكمي منذ 2026-05-12 | **29 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق جديد**
+---
