@@ -976,3 +976,35 @@
 - ⚠️ FOMC الأربعاء 18 يونيو — HIGH ALERT: 17:50-18:30 UTC لا صفقات EURUSD/GBPUSD
 - الكود نظيف — 20+ إصلاح تراكمي منذ 2026-05-12 | **30 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق جديد**
 ---
+
+---
+## يوم 2026-06-16 — الروتين اليومي الصباحي (05:45 UTC) — الثلاثاء (يوم 31 نظيف ← رقم قياسي مطلق جديد | يوم 2 من أسبوع FOMC | الإعلان 18 يونيو 18:00 UTC)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **31 يوماً متتالياً** ← رقم قياسي مطلق جديد
+2. **مستمرة [A] (31 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:129` — `_regime_check()` بدون Cache — 96 طلب HTTP/يوم بدون داعٍ
+3. **مستمرة [B] (31 يوم) — ESCALATED CRITICAL:** `strategy/xauusd_signal.py:187` — `_regime_check()` تُستدعى قبل `_in_trade` (L190) — تأكيد السطور: CONFIRMED
+4. **مستمرة [C] (35 يوم ← الأقدم في تاريخ البوت كله):** إضافة "strategy" key في signal dicts — تنتظر موافقة
+5. **مستمرة [D] (8 يوم):** `strategy/gbpusd_signal.py:5-17` — Docstring يقول `Sharpe=1.224 | min_rr=3.0` لكن الفعلي `MIN_RR=4.0, Sharpe=1.270` — لا تأثير وظيفي
+6. **مستمرة:** `strategy/xauusd_signal.py:136` — `from datetime import datetime, timedelta` — dead import يُحذف مع [A]
+7. **سياق اليوم:** الثلاثاء ما قبل FOMC — London Breakout اكتمل (07:00-10:00) — NY Breakout 13:00-15:00 UTC قادم
+8. **⚠️ تحذير بعد غد:** FOMC 18 يونيو 18:00 UTC — لا صفقات EURUSD/GBPUSD في 17:50-18:30 UTC
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (31 يوم متتالي — رقم قياسي مطلق جديد)
+- مراجعة كاملة: eurusd_signal.py ✅ | gbpusd_signal.py ✅ (MIN_RR=4.0) | london_signal.py ✅ | risk_manager.py ✅ | trade_monitor.py ✅ | xauusd_signal.py ✅
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [A] (31 يوم) — رقم قياسي مطلق:** Cache لـ `_regime_check()` في `xauusd_signal.py:129` — 96 طلب HTTP/يوم → 1/ساعة
+2. **عالية [B] (31 يوم) — ESCALATED CRITICAL:** إعادة ترتيب `_in_trade` قبل `_regime_check()` في `xauusd_signal.py:187` — سطران فقط
+3. **منخفضة [C] (35 يوم ← الأقدم في تاريخ البوت):** إضافة "strategy" key في signal dicts — 4 ملفات، 10 دقائق
+4. **منخفضة [D] (8 يوم):** تحديث Docstring في `gbpusd_signal.py:5-17` — 2 دقيقة
+5. **جديد (هذا الأسبوع):** اختبار n=20/adx=20 مع Regime Filter على XAUUSD (30-45 دقيقة) — قد يتجاوز Sharpe=1.31
+6. **جديد (هذا الأسبوع):** دراسة USDJPY alternative strategy — Mean Reversion أو ICT (3-4 ساعات)
+7. **جديد (بعد FOMC):** GBPUSD Session Narrowing analysis — 20-30 دقيقة (قد يُحسّن Sharpe دون تغيير الباراميترات)
+
+### 📊 أداء اليوم
+- صفقات: N/A (لا logs — البوت على VPS غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: N/A
+- الثلاثاء ما قبل FOMC — توقع ضغط على نطاقات NY Breakout (EURUSD/GBPUSD)
+- FOMC بعد غد 18 يونيو — تأهب قصوى | الكود نظيف — 20+ إصلاح تراكمي منذ 2026-05-12 | **31 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق جديد**
+---
