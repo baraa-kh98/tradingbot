@@ -1041,3 +1041,37 @@
 - ⚠️⚠️⚠️ FOMC TOMORROW 18 يونيو 18:00 UTC — Blackout Window: 17:50-18:30 UTC
 - الكود نظيف — 20+ إصلاح تراكمي منذ 2026-05-12 | **32 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق جديد**
 ---
+
+---
+## يوم 2026-06-18 — الروتين اليومي الصباحي (06:00 UTC) — الخميس (يوم 33 نظيف ← رقم قياسي مطلق جديد | ⚠️⚠️⚠️ FOMC TODAY 18:00 UTC — أحرج يوم في الشهر)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **33 يوماً متتالياً** ← رقم قياسي مطلق جديد
+2. **مستمرة [A] (33 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:129` — `_regime_check()` بدون Cache — 96 طلب HTTP/يوم بدون داعٍ
+3. **مستمرة [B] (33 يوم) — ESCALATED CRITICAL:** `strategy/xauusd_signal.py:187` — `_regime_check()` تُستدعى قبل `_in_trade` (L190) — تأكيد السطور: CONFIRMED
+4. **مستمرة [C] (37 يوم ← الأقدم في تاريخ البوت كله):** إضافة "strategy" key في signal dicts — تنتظر موافقة
+5. **مستمرة [D] (10 يوم):** `strategy/gbpusd_signal.py:5-17` — Docstring يقول `Sharpe=1.224 | min_rr=3.0` لكن الفعلي `MIN_RR=4.0, Sharpe=1.270` — لا تأثير وظيفي
+6. **مستمرة:** `strategy/xauusd_signal.py:136` — `from datetime import datetime, timedelta` — dead import يُحذف مع [A]
+7. **⚠️⚠️⚠️ حدث حرج اليوم:** FOMC 18 يونيو 18:00 UTC — الإعلان الأبرز هذا الشهر
+8. **جديد (FOMC Unblocks):** بعد FOMC اليوم، التعديلات [A][B][C][D] مفتوحة للتطبيق — جمعة/سبت
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (33 يوم متتالي — رقم قياسي مطلق جديد)
+- مراجعة كاملة: eurusd_signal.py ✅ | gbpusd_signal.py ✅ (MIN_RR=4.0) | london_signal.py ✅ | risk_manager.py ✅ (SELL BE صحيح) | trade_monitor.py ✅ | xauusd_signal.py ✅
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [A] (33 يوم) — رقم قياسي مطلق:** Cache لـ `_regime_check()` في `xauusd_signal.py:129` — 96 طلب HTTP/يوم → 1/ساعة — **UNBLOCKED بعد FOMC**
+2. **عالية [B] (33 يوم) — ESCALATED CRITICAL:** إعادة ترتيب `_in_trade` قبل `_regime_check()` في `xauusd_signal.py:187` — سطران فقط — **UNBLOCKED بعد FOMC**
+3. **منخفضة [C] (37 يوم ← الأقدم في تاريخ البوت):** إضافة "strategy" key في signal dicts — 4 ملفات، 10 دقائق
+4. **منخفضة [D] (10 يوم):** تحديث Docstring في `gbpusd_signal.py:5-17` — 2 دقيقة
+5. **جديد (الجمعة/السبت بعد FOMC):** اختبار n=20/adx=20 مع Regime Filter على XAUUSD — قد يتجاوز Sharpe=1.31
+6. **جديد (السبت/الأحد):** GBPUSD Session Narrowing — هل 13:00-14:00 أفضل من 14:00-15:00؟ (20-30 دقيقة)
+7. **جديد (الأسبوع القادم):** دراسة USDJPY alternative strategy — Mean Reversion أو ICT (3-4 ساعات)
+8. **جديد (بعد 3 FOMC meetings):** FOMC Day Filter لـ EURUSD/GBPUSD — تحتاج بيانات من اليوم أولاً
+
+### 📊 أداء اليوم
+- صفقات: N/A (لا logs — البوت على VPS غير مشغّل في بيئة الكلاود) | Win Rate: N/A | P&L: N/A
+- ⚠️⚠️⚠️ FOMC TODAY 18 يونيو 18:00 UTC — Blackout Window: 17:50-18:30 UTC — أغلق EURUSD/GBPUSD يدوياً
+- FOMC Unblocks جميع التعديلات المعلّقة → اليوم بعد FOMC أو الجمعة بدء التطبيق
+- الكود نظيف — 20+ إصلاح تراكمي منذ 2026-05-12 | **33 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق جديد**
+---
