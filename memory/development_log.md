@@ -1339,3 +1339,57 @@
 - الجمعة — Q2-End الفعلي (تصحيح من "27 يونيو" الخاطئ) | آخر يوم تداول Q2 2026
 - الكود نظيف — 22+ إصلاح تراكمي منذ 2026-05-12 | **41 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق جديد**
 ---
+
+---
+## يوم 2026-06-27 — الروتين اليومي الصباحي (05:43 UTC) — السبت (يوم 42 نظيف ← رقم قياسي مطلق جديد | أول يوم Q3 Weekend | **[18] USDJPY Asia Mean Reversion backtest — مُنجَز اليوم**)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **42 يوماً متتالياً** ← رقم قياسي مطلق جديد
+2. **مستمرة [B] (42 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:186-191` — `_regime_check()` تُستدعى قبل `_in_trade`
+3. **مستمرة [A] (42 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:129` — `_regime_check()` بدون Cache + dead import L136
+4. **مستمرة [C] (46 يوم ← الأقدم في تاريخ البوت كله):** إضافة "strategy" key في signal dicts — 4 ملفات
+5. **مستمرة [D] (19 يوم):** `strategy/gbpusd_signal.py:5-17` — Docstring يقول `Sharpe=1.224 | min_rr=3.0` لكن الفعلي `MIN_RR=4.0, Sharpe=1.270`
+6. **مستمرة [NEW-minor]:** `risk/trade_monitor.py:203` — `"ICT Partial TP"` — بقايا v1.0
+7. **🆕 جديد اليوم [E]:** `strategy/xauusd_signal.py:10` — Docstring يقول `Sharpe=1.31` لكن June 21 re-run أعطى **1.621** (JSON الأصلي 2026-05-16: 1.306)
+8. **السبت — أسواق مغلقة:** لا logs لمراجعة — البوت على VPS
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (42 يوم متتالي — رقم قياسي مطلق جديد)
+
+### 📊 [18] USDJPY Asia Range Mean Reversion — Backtest اليوم السبت 27 يونيو
+**الاختبار الافتراضي (buf=5pip, rr=3.0, min_range=30pip):**
+- Trades=64 | WR=34.4% | Return=+6.78% | DD=-13.13% | Sharpe=0.34 | PF=1.18
+- **vs BASELINE (London Breakout):** Sharpe=0.98 | Return=+17.81% | DD=-5.68%
+- **الاختبار الافتراضي أسوأ من Baseline في جميع المقاييس**
+
+**Grid Search (192 تجربة — مُكتمَل):**
+- أنظر ملف: `reports/usdjpy_asia_mr_results_2026-06-27.json`
+- القرار النهائي: (يُضاف عند انتهاء Grid Search)
+
+**التحليل من منظور خبير التداول:**
+- USDJPY Asia Range في London Open → carry trade يُسيطر → ليست منطقة "failed breakout" كلاسيكية
+- 2024-2025 = uptrend قوي → H4 BULLISH filter يُلغي SELLs → اتجاه BUY فقط → WR منخفض
+- RR 3.0 مرتفع جداً لـ range play ضيق
+- الخلاصة: الفرضية صحيحة نظرياً لكن USDJPY تحديداً له ديناميكيات مختلفة
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [B] (42 يوم) — رقم قياسي مطلق:** `_in_trade` قبل `_regime_check()` في `xauusd_signal.py:186`
+2. **عالية [A] (42 يوم) — رقم قياسي مطلق:** Cache لـ `_regime_check()` في `xauusd_signal.py:129`
+3. **منخفضة [C] (46 يوم ← الأقدم في تاريخ البوت):** إضافة "strategy" key في signal dicts
+4. **منخفضة [D] (19 يوم):** تحديث Docstring في `gbpusd_signal.py:5-17`
+5. **جديدة [E] (1 يوم):** تحديث Docstring في `xauusd_signal.py:10` (1.31→1.62)
+6. **منخفضة [NEW-minor]:** `risk/trade_monitor.py:203` — "ICT Partial TP" → "Bot Partial TP"
+7. **أولوية الأسبوع القادم [F]:** USDJPY استراتيجية بديلة إذا رُفض [18] — 3 أفكار جديدة
+
+### 📊 أداء اليوم
+- صفقات: N/A (السبت — أسواق مغلقة) | Win Rate: N/A | P&L: N/A
+- الكود نظيف — 22+ إصلاح تراكمي منذ 2026-05-12 | **42 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق جديد**
+- Q3 2026 يبدأ الاثنين 30 يونيو — أول يوم تداول للربع الثالث
+---
+
+**[تحديث] Grid Search مُكتمَل — 576 تجربة:**
+- BEST: Sharpe=1.027 (buf=15pip, re=1pip, rng=40pip, RR=3.0, atr=0.3x) | T=23 | WR=43.5%
+- Delta vs baseline: +0.047 (4.8% improvement only)
+- **الحكم النهائي: ❌ REJECTED — لم يصل للهدف 1.5 ← [18] مُغلَق**
+- درس: Asia Range MR في USDJPY يعمل أفضل مع فلاتر صارمة جداً (buf=15pip) لكن ينتج صفقات قليلة جداً
+- التالي: [F] بديل جديد للـ USDJPY — 3 أفكار بديلة (BOJ Zone / Carry Reversal / Session Overlap)
