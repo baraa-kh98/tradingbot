@@ -1393,3 +1393,39 @@
 - **الحكم النهائي: ❌ REJECTED — لم يصل للهدف 1.5 ← [18] مُغلَق**
 - درس: Asia Range MR في USDJPY يعمل أفضل مع فلاتر صارمة جداً (buf=15pip) لكن ينتج صفقات قليلة جداً
 - التالي: [F] بديل جديد للـ USDJPY — 3 أفكار بديلة (BOJ Zone / Carry Reversal / Session Overlap)
+
+---
+## يوم 2026-06-28 — الروتين اليومي الصباحي (05:34 UTC) — الأحد (يوم 43 نظيف ← رقم قياسي مطلق جديد | Q3 يفتح الليلة 22:00 UTC | أول يوم تداول الاثنين 30 يونيو | ⛔ 4 يوليو Independence Day)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **43 يوماً متتالياً** ← رقم قياسي مطلق جديد
+2. **مستمرة [B] (43 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:186-191` — `_regime_check()` تُستدعى قبل `_in_trade`
+3. **مستمرة [A] (43 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:129` — `_regime_check()` بدون Cache + dead import L133
+4. **مستمرة [C] (47 يوم ← الأقدم في تاريخ البوت كله):** إضافة "strategy" key في signal dicts — 4 ملفات
+5. **مستمرة [D] (20 يوم):** `strategy/gbpusd_signal.py:5-17` — Docstring يقول `Sharpe=1.224 | min_rr=3.0` لكن الفعلي `MIN_RR=4.0, Sharpe=1.270`
+6. **مستمرة [E] (2 يوم):** `strategy/xauusd_signal.py:10` — Docstring `Sharpe=1.31` vs الفعلي `1.621`
+7. **مستمرة [NEW-minor]:** `risk/trade_monitor.py:203` — `"ICT Partial TP"` — بقايا v1.0
+8. **الأحد — أسواق مغلقة:** لا logs | Q3 يبدأ الاثنين 30 يونيو
+9. **⚠️ تحذيران مهمان للأسبوع القادم:**
+   - Weekend Gap Q3-Open الليلة 22:00 UTC → لا إشارات أول 30 دقيقة London الاثنين
+   - الجمعة 4 يوليو = Independence Day → سيولة صفر في NY → لا EURUSD/GBPUSD
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (43 يوم متتالي — رقم قياسي مطلق جديد)
+- مراجعة كاملة: eurusd_signal.py ✅ | gbpusd_signal.py ✅ (MIN_RR=4.0 L38 مُؤكَّد) | london_signal.py ✅ | risk_manager.py ✅ (SELL BE L163 entry-offset مُؤكَّد) | trade_monitor.py ✅ | xauusd_signal.py ✅ (منطق سليم، [A][B][E] معلّقون)
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [B] (43 يوم) — رقم قياسي مطلق:** `_in_trade` قبل `_regime_check()` في `xauusd_signal.py:186`
+2. **عالية [A] (43 يوم) — رقم قياسي مطلق:** Cache لـ `_regime_check()` في `xauusd_signal.py:129`
+3. **منخفضة [C] (47 يوم ← الأقدم في تاريخ البوت):** إضافة "strategy" key في signal dicts — 4 ملفات
+4. **منخفضة [D] (20 يوم):** تحديث Docstring في `gbpusd_signal.py:5-17`
+5. **منخفضة [E] (2 يوم):** تحديث Docstring في `xauusd_signal.py:10` (1.31→1.62)
+6. **منخفضة [NEW-minor]:** `risk/trade_monitor.py:203` — "ICT Partial TP" → "Bot Partial TP"
+7. **أولوية الأسبوع [F] (7-11 يوليو):** USDJPY BOJ Zone Filter — backtest
+
+### 📊 أداء اليوم
+- صفقات: N/A (الأحد — أسواق مغلقة) | Win Rate: N/A | P&L: N/A
+- الكود نظيف — 22+ إصلاح تراكمي منذ 2026-05-12 | **43 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق جديد**
+- [18] USDJPY Asia MR: ❌ REJECTED أمس (Sharpe=1.027, T=23 — دون الهدف 1.5)
+- التالي: [F] USDJPY BOJ Zone Filter — backtest أسبوع 7-11 يوليو 2026
+---
