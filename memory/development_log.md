@@ -1429,3 +1429,31 @@
 - [18] USDJPY Asia MR: ❌ REJECTED أمس (Sharpe=1.027, T=23 — دون الهدف 1.5)
 - التالي: [F] USDJPY BOJ Zone Filter — backtest أسبوع 7-11 يوليو 2026
 ---
+
+---
+## يوم 2026-06-29 — الروتين اليومي الصباحي (~06:00 UTC) — الاثنين (يوم 44 نظيف ← رقم قياسي مطلق جديد | أول يوم تداول Q3 2026 | [D][E][NEW-minor] طُبّقت تلقائياً | [A][B] 44 يوم خامد)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **44 يوماً متتالياً** ← رقم قياسي مطلق جديد
+2. **مستمرة [B] (44 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:182-185` — `_regime_check()` تُستدعى قبل `_in_trade`
+3. **مستمرة [A] (44 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:129` — `_regime_check()` بدون Cache + dead import L133
+4. **مستمرة [C] (48 يوم ← الأقدم في تاريخ البوت كله):** إضافة "strategy" key في signal dicts — 4 ملفات
+5. **⚠️ تحذير Q3-Open Weekend Gap:** فجوة سعرية محتملة — لا إشارات أول 30 دقيقة London Open
+6. **⚠️ تحذير الجمعة 4 يوليو — Independence Day:** أوقف NY Breakouts (EURUSD/GBPUSD/XAUUSD)
+
+### ✅ إصلاحات طُبّقت تلقائياً
+1. **[D]** `strategy/gbpusd_signal.py:3-17` — Docstring: `Sharpe=1.224 | min_rr=3.0` → `Sharpe=1.270 | min_rr=4.0` (توثيق فقط — صفر تأثير وظيفي)
+2. **[E]** `strategy/xauusd_signal.py:10` — Docstring: `Sharpe=1.31→1.62` (re-run 2026-06-21) — توثيق فقط
+3. **[NEW-minor]** `risk/trade_monitor.py:203` — `"ICT Partial TP"` → `"Bot Partial TP"` — تسمية فقط
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [B] (44 يوم) — رقم قياسي مطلق:** `_in_trade` قبل `_regime_check()` في `xauusd_signal.py:182`
+2. **عالية [A] (44 يوم) — رقم قياسي مطلق:** Cache لـ `_regime_check()` في `xauusd_signal.py:129`
+3. **منخفضة [C] (48 يوم ← الأقدم في تاريخ البوت):** إضافة "strategy" key في signal dicts — 4 ملفات
+4. **أولوية الأسبوع [F] (7-11 يوليو):** USDJPY BOJ Zone Filter Backtest
+
+### 📊 أداء اليوم
+- صفقات: N/A (لا logs — البوت على VPS) | Win Rate: N/A | P&L: N/A
+- أول يوم تداول Q3 2026 | Weekend Gap محتمل من فتح الأسواق 22:00 UTC أمس
+- الكود نظيف — 3 إصلاحات تجميلية اليوم (D, E, NEW-minor) | **44 يوم بدون مشكلة حرجة**
+---

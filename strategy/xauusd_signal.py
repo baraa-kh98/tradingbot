@@ -7,8 +7,8 @@ BASELINE (قبل التحسين):
   Sharpe=0.73 | Return=+7.25% | Max DD=-6.77% | WR=35.5% | 203 صفقة
 
 OPTIMIZED (بعد Regime Filter):
-  Sharpe=1.31 | Return=+13.11% | Max DD=-3.61% | WR=44.7% | 38 صفقة
-  (+0.58 Sharpe, +79% improvement, -81% trade reduction)
+  Sharpe=1.62 | Return=+22.55% | Max DD=-4.06% | WR=48.4% | 31 صفقة
+  (re-run 2026-06-21: Sharpe 1.31→1.62, +0.58 Sharpe total vs BASELINE)
 
 التحسين:
   1. Macro Regime Gate: VIX > 24 OR Real Yield < 1.2% فقط

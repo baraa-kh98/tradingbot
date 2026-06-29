@@ -200,7 +200,7 @@ class TradeMonitor:
                 "price": close_price,
                 "deviation": 20,
                 "magic": pos.magic,
-                "comment": "ICT Partial TP",
+                "comment": "Bot Partial TP",
                 "type_time": mt5.ORDER_TIME_GTC,
                 "type_filling": mt5.ORDER_FILLING_IOC,
             }
