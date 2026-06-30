@@ -1,6 +1,6 @@
 # اقتراحات مفتوحة — قيد الدراسة
 
-> آخر تحديث: 2026-06-29 (روتين صباحي — الاثنين | يوم 44 نظيف ← رقم قياسي مطلق | أول يوم تداول Q3 2026 | [D][E][NEW-minor] أُغلقت بتطبيق تلقائي | [A][B][C] تنتظر الموافقة | [F] BOJ Zone مجدول 7-11 يوليو)
+> آخر تحديث: 2026-06-30 (روتين صباحي — الثلاثاء | يوم 45 نظيف ← رقم قياسي مطلق | آخر يوم H1 2026 | ⚠️ Month-End Rebalancing Risk | [A][B][C] تنتظر الموافقة 45+ يوم | [F] BOJ Zone مجدول 7-11 يوليو | [Month-End Filter] اقتراح جديد)
 
 ---
 
@@ -38,6 +38,22 @@
 - **المشكلة:** إشعار Telegram يعرض "Breakout" لكل الأزواج بدل الاسم الفعلي
 - **الإصلاح:** إضافة `"strategy": "EURUSD NY Breakout"` إلخ. في كل dict إشارة
 - **الحالة:** ⏳ ينتظر موافقة المستخدم (**48 يوم** ← **الأقدم في تاريخ البوت كله**)
+
+---
+
+## 🔵 منخفضة الأولوية — اقتراحات جديدة
+
+### [Month-End Filter] EURUSD/GBPUSD — تصفية آخر 2-3 أيام الشهر *(2026-06-30، جديد)*
+- **الملفات:** `strategy/eurusd_signal.py`, `strategy/gbpusd_signal.py`
+- **الفرضية:** آخر يومين تداول في الشهر يُولّدان False Breakouts بنسبة أعلى بسبب Rebalancing المؤسسي
+- **الإصلاح المقترح:**
+  ```python
+  from datetime import datetime, timezone
+  if datetime.now(timezone.utc).day >= 28:
+      return None  # skip last 3 trading days of month
+  ```
+- **يحتاج backtest** على `backtest_data/EURUSD_H1_2years.csv` و `GBPUSD_H1_2years.csv`
+- **الحالة:** 💡 فكرة — تحتاج backtest لتأكيد
 
 ---
 
