@@ -1515,3 +1515,32 @@
 - أول يوم H2/Q3 2026 | ISM PMI ~14:00 UTC | ⛔ الجمعة 3 يوليو مغلق (Independence Day Observed)
 - الكود نظيف — 23+ إصلاح تراكمي منذ 2026-05-12 | **46 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق جديد**
 ---
+
+---
+## يوم 2026-07-02 — الروتين اليومي الصباحي (06:30 UTC) — الخميس (يوم 47 نظيف ← رقم قياسي مطلق جديد | ⚠️ US Jobless Claims 12:30 UTC | ⛔ الجمعة 3 يوليو Independence Day Observed | 📊 [F] BOJ Zone Backtest هذا الأسبوع!)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **47 يوماً متتالياً** ← رقم قياسي مطلق جديد
+2. **مستمرة [B] (47 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:187-190` — `_regime_check()` تُستدعى قبل `_in_trade` — مُؤكَّد في الكود
+3. **مستمرة [A] (47 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:129` — `_regime_check()` بدون Cache + dead import `datetime, timedelta` على L136 — مُؤكَّد
+4. **مستمرة [C] (51 يوم ← الأقدم في تاريخ البوت كله):** إضافة "strategy" key في signal dicts — 4 ملفات
+5. **⚠️ تحذير اليوم:** US Jobless Claims 12:30 UTC — 30 دقيقة قبل فتح NY — spike محتمل عند 13:00
+6. **⛔ تحذير حرج (غداً):** الجمعة 3 يوليو = Independence Day (Observed) — أسواق أمريكية مغلقة — لا NY Breakouts
+7. **📊 هذا الأسبوع [F]:** السبت 5 يوليو + الأحد 6 يوليو = نافذة مثالية لـ USDJPY BOJ Zone Filter backtest
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (47 يوم متتالي — رقم قياسي مطلق جديد)
+- مراجعة كاملة: eurusd_signal.py ✅ | gbpusd_signal.py ✅ | london_signal.py ✅ | risk_manager.py ✅ | trade_monitor.py ✅ | xauusd_signal.py ✅ (منطق تداول سليم، [A][B] معلّقان على L129+L187)
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [B] (47 يوم) — رقم قياسي مطلق:** `_in_trade` قبل `_regime_check()` في `xauusd_signal.py:187` — سطران فقط، صفر تأثير على منطق التداول
+2. **عالية [A] (47 يوم) — رقم قياسي مطلق:** Cache لـ `_regime_check()` في `xauusd_signal.py:129` — 96 طلب HTTP/يوم → 24/يوم + حذف dead import L136
+3. **منخفضة [C] (51 يوم ← الأقدم في تاريخ البوت):** إضافة "strategy" key في signal dicts — 4 ملفات، 10 دقائق
+4. **عالية (هذا الأسبوع) [F]:** USDJPY BOJ Zone Filter Backtest — السبت 5 أو الأحد 6 يوليو
+5. **تذكير [5]:** CPI يوليو ~8 يوليو → تحديث `estimated_cpi` في `xauusd_signal.py:153` (الحالي: 2.8، آخر تحديث مايو 2026)
+
+### 📊 أداء اليوم
+- صفقات: N/A (لا logs — البوت على VPS) | Win Rate: N/A | P&L: N/A
+- خميس نظيف | Jobless Claims 12:30 UTC | ⛔ غداً Independence Day Observed = لا NY sessions
+- الكود نظيف — 23+ إصلاح تراكمي منذ 2026-05-12 | **47 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق جديد**
+---
