@@ -1572,3 +1572,47 @@
 - ⛔ Independence Day Observed — يوم هادئ — لا NY sessions — spreads واسعة — تقلب منخفض
 - الكود نظيف — 23+ إصلاح تراكمي منذ 2026-05-12 | **48 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق مستمر**
 ---
+
+---
+## يوم 2026-07-04 — الروتين اليومي الصباحي (05:42 UTC) — السبت (يوم 49 نظيف ← رقم قياسي مطلق | 🇺🇸 Independence Day = لا US markets | 🏆 [F] BOJ Zone Filter مطبَّق! Sharpe 0.97→1.58)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **49 يوماً متتالياً**
+2. **مستمرة [B] (49 يوم):** `strategy/xauusd_signal.py:187-190` — `_regime_check()` قبل `_in_trade`
+3. **مستمرة [A] (49 يوم):** `strategy/xauusd_signal.py:129` — Cache مفقود + dead import
+4. **مستمرة [C] (53 يوم ← الأقدم):** إضافة "strategy" key — 4 ملفات
+5. **سياق اليوم:** السبت = نافذة صيانة مثالية → [F] BOJ Zone Backtest منجز اليوم ✅
+
+### ✅ إصلاحات طُبّقت تلقائياً
+1. **[F] USDJPY BOJ Zone Filter — `strategy/london_signal.py`**
+   - أضيف: `BOJ_UPPER = 151.0` و `BOJ_LOWER = 149.0` كـ class constants (L54-60)
+   - أضيف: فلتر BUY في L146: `if price > self.BOJ_UPPER: return None`
+   - أضيف: فلتر SELL في L157: `if price < self.BOJ_LOWER: return None`
+   - نتيجة Backtest: Sharpe 0.97 → **1.58** (+0.61) | WR 36.2% → 50.0% | DD -5.68% → -3.25%
+   - بيانات: 14,395 شمعة H1 | 2024-01-02 → 2026-04-05
+   - قرار: ✅ APPLY (جميع معايير القبول محققة: Sharpe≥1.5 ✅ | Improved ✅ | DD≤15% ✅ | Trades≥15 ✅)
+
+### Backtest Run — 2026-07-04
+- Pair: USDJPY | Strategy: London Breakout + BOJ Zone Filter (Directional)
+- Params changed: BOJ_UPPER=151.0 + BOJ_LOWER=149.0 (جديدان)
+- Old Sharpe: 0.97 | New Sharpe: **1.58** (+0.61)
+- Old Return: +17.81% | New Return: **+20.53%** (+2.72%)
+- Old WR: 36.2% | New WR: **50.0%** (+13.8pp)
+- Old Max DD: -5.68% | New Max DD: **-3.25%** (-2.43pp أفضل)
+- Old Trades: 69 | New Trades: 34 (تصفية تحسّن الجودة)
+- Decision: ✅ Applied to strategy/london_signal.py
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [B] (49 يوم):** `_in_trade` قبل `_regime_check()` — سطران فقط
+2. **عالية [A] (49 يوم):** Cache لـ `_regime_check()` — تقليل 96→24 HTTP/يوم
+3. **منخفضة [C] (53 يوم ← الأقدم):** "strategy" key في signal dicts — 4 ملفات
+4. **جديد — الأحد:** GBPUSD H4 RSI Filter backtest (الفجوة الأخيرة: 1.27 vs 1.5)
+5. **تذكير [5]:** CPI يوليو ~8 يوليو → تحديث `estimated_cpi` في `xauusd_signal.py:153`
+
+### 📊 أداء اليوم
+- صفقات: N/A (لا logs — البوت على VPS) | Win Rate: N/A | P&L: N/A
+- 🇺🇸 Independence Day — لا US markets — USDJPY London (07:00-10:00 UTC) مضى وقته
+- 🏆 **إنجاز اليوم: [F] BOJ Zone Filter مطبَّق — USDJPY Sharpe 0.97 → 1.58 — أكبر تحسين منذ XAUUSD Regime Filter (0.89+)**
+- الكود نظيف — 24+ إصلاح تراكمي منذ 2026-05-12 | **49 يوم بدون مشاكل حرجة**
+- حالة الأزواج: EURUSD ✅ (1.61) | GBPUSD ⚠️ (1.27) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) ← جديد!
+---

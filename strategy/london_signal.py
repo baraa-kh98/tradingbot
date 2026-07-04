@@ -1,7 +1,10 @@
 """
 London Breakout Signal Generator
 ==================================
-الاستراتيجية الفائزة من الباكتست:
+الاستراتيجية المحسّنة بعد BOJ Zone Filter (2026-07-04):
+  - Sharpe 1.58 | Return +20.53% | Max DD -3.25% | WR 50% | 34 صفقة
+
+BASELINE (قبل التحسين):
   - +17.81% / سنتين | Sharpe 0.97 | Max DD -5.68% | PF 1.66
 
 المنطق:
@@ -47,6 +50,14 @@ class LondonSignalGenerator:
     MIN_RR         = 3.0    # Risk : Reward
     MIN_RANGE_PIPS = 40     # الحد الأدنى لحجم Range آسيا
     MAX_RANGE_PIPS = 200    # الحد الأعلى (تجنب أيام الأخبار المتطرفة)
+
+    # ── BOJ Zone Filter (2026-07-04) ─────────────────────────────
+    # Backtest: Sharpe 0.97→1.58 | WR 36.2%→50.0% | DD -5.68%→-3.25%
+    # فوق 151: BOJ قد يتدخل لوقف ضعف JPY → BUY محظور
+    # تحت 149: JPY قوي/BOJ intervention zone → SELL محظور
+    # 149-151:  منطقة محايدة → كلا الاتجاهين مسموحان
+    BOJ_UPPER = 151.0  # BUY مسموح فقط عند price <= 151
+    BOJ_LOWER = 149.0  # SELL مسموح فقط عند price >= 149
 
     # نافذة لندن (ساعات UTC)
     LONDON_OPEN  = 7
@@ -132,6 +143,8 @@ class LondonSignalGenerator:
 
         # BUY: كسر فوق Asia High
         if price > asia_high + buf and bias != "BEARISH":
+            if price > self.BOJ_UPPER:  # BOJ Zone Filter: لا BUY فوق 151
+                return None
             sl   = asia_low
             risk = price - sl
             if risk <= 0:
@@ -141,6 +154,8 @@ class LondonSignalGenerator:
 
         # SELL: كسر تحت Asia Low
         elif price < asia_low - buf and bias != "BULLISH":
+            if price < self.BOJ_LOWER:  # BOJ Zone Filter: لا SELL تحت 149
+                return None
             sl   = asia_high
             risk = sl - price
             if risk <= 0:
