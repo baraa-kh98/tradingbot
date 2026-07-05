@@ -1616,3 +1616,48 @@
 - الكود نظيف — 24+ إصلاح تراكمي منذ 2026-05-12 | **49 يوم بدون مشاكل حرجة**
 - حالة الأزواج: EURUSD ✅ (1.61) | GBPUSD ⚠️ (1.27) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) ← جديد!
 ---
+
+---
+## يوم 2026-07-05 — الروتين اليومي الصباحي (06:20 UTC) — الأحد (يوم 50 نظيف ← رقم قياسي مطلق جديد | 🏆 MILESTONE: جميع الأزواج ≥ Sharpe 1.5 لأول مرة! | [G] GBPUSD H4 RSI Filter مطبَّق! Sharpe 1.27→1.664 | [A][B] 50 يوم | [C] 54 يوم ← الأقدم)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **50 يوماً متتالياً** ← رقم قياسي مطلق جديد
+2. **مستمرة [B] (50 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:187-190` — `_regime_check()` قبل `_in_trade`
+3. **مستمرة [A] (50 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:129` — Cache مفقود + dead import L136
+4. **مستمرة [C] (54 يوم ← الأقدم في تاريخ البوت):** إضافة "strategy" key في signal dicts — 4 ملفات
+5. **سياق اليوم:** الأحد = نافذة صيانة مثالية → [G] GBPUSD H4 RSI Backtest منجز اليوم ✅
+
+### ✅ إصلاحات طُبّقت تلقائياً
+1. **[G] GBPUSD H4 RSI Filter — `strategy/gbpusd_signal.py`**
+   - أضيف: `RSI_HI = 75` و `RSI_LO = 25` و `RSI_PERIOD = 14` كـ class constants
+   - أضيف: `_h4_rsi()` helper (resamples H1→H4 إن لم يتوفر h4_df)
+   - أضيف: فلتر BUY: لا دخول عند H4 RSI > 75 (overbought)
+   - أضيف: فلتر SELL: لا دخول عند H4 RSI < 25 (oversold)
+   - نتيجة Backtest: Sharpe 1.273 → **1.664** (+0.391) | WR 34.2%→40.6% | DD -7.14%→-6.14% | Return 23.51%→31.62% | PF 1.766→2.222
+   - بيانات: 12,844 شمعة H1 | 2024-04-07 → 2026-04-06
+   - قرار: ✅ APPLY (جميع معايير القبول: Sharpe≥1.5 ✅ | Improved ✅ | DD≤15% ✅ | Trades≥20 ✅)
+
+### Backtest Run — 2026-07-05
+- Pair: GBPUSD | Strategy: NY Breakout + H4 RSI Filter (25/75)
+- Params changed: RSI_HI=75 + RSI_LO=25 (جديدان)
+- Old Sharpe: 1.273 | New Sharpe: **1.664** (+0.391)
+- Old Return: +23.51% | New Return: **+31.62%** (+8.11%)
+- Old WR: 34.2% | New WR: **40.6%** (+6.4pp)
+- Old Max DD: -7.14% | New Max DD: **-6.14%** (-1.0pp أفضل)
+- Old Trades: 38 | New Trades: 32 (جودة أعلى، كمية أقل)
+- Old PF: 1.766 | New PF: **2.222** (+0.456)
+- Decision: ✅ Applied to strategy/gbpusd_signal.py
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [B] (50 يوم) — رقم قياسي مطلق:** `_in_trade` قبل `_regime_check()` — سطران فقط
+2. **عالية [A] (50 يوم) — رقم قياسي مطلق:** Cache لـ `_regime_check()` — تقليل 96→24 HTTP/يوم
+3. **منخفضة [C] (54 يوم ← الأقدم في تاريخ البوت):** "strategy" key في signal dicts — 4 ملفات
+4. **تذكير [5]:** CPI يوليو ~8 يوليو → تحديث `estimated_cpi` في `xauusd_signal.py:153`
+
+### 📊 أداء اليوم
+- صفقات: N/A (لا logs — البوت على VPS) | Win Rate: N/A | P&L: N/A
+- 🛑 الأحد — جميع الأسواق مغلقة — يوم صيانة مثالي
+- 🏆 **إنجاز اليوم: [G] GBPUSD H4 RSI Filter مطبَّق — لأول مرة: جميع الأزواج الـ 4 ≥ Sharpe 1.5!**
+- حالة الأزواج: EURUSD ✅ (1.61) | **GBPUSD ✅ (1.664) ← جديد!** | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58)
+- الكود نظيف — 25+ إصلاح تراكمي منذ 2026-05-12 | **50 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق**
+---

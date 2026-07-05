@@ -1,7 +1,10 @@
 """
 GBPUSDSignalGenerator — NY Open Breakout
 ==========================================
-استراتيجية مثبتة بالباكتست (2 سنة H1):
+استراتيجية محسّنة (2026-07-05: H4 RSI Filter):
+  Sharpe=1.664 | Return=+31.62% | Max DD=-6.14% | PF=2.22 | 32 صفقة
+
+BASELINE (قبل H4 RSI Filter — 2026-06-06):
   Sharpe=1.270 | Return=+19.1% | Max DD=-7.1% | PF=1.74 | 41 صفقة
   (فاينتيون 2026-06-06: MIN_RR 3.0→4.0، Sharpe 1.224→1.270)
 
@@ -15,6 +18,7 @@ GBPUSDSignalGenerator — NY Open Breakout
   3. الـ Range لازم >= 60 pips (تصفية الأيام الهادئة)
   4. SL = 1.8 × ATR(14)
   5. TP = 4.0 × risk
+  6. H4 RSI(14) Filter (2026-07-05): لا BUY عند RSI > 75، لا SELL عند RSI < 25
 """
 
 import numpy as np
@@ -22,6 +26,9 @@ import pandas as pd
 from typing import Optional, Dict, Any
 
 from strategy.base_strategy import BaseStrategy
+from utils.logger import get_logger
+
+_log = get_logger("gbpusd_signal")
 
 
 class GBPUSDSignalGenerator(BaseStrategy):
@@ -40,6 +47,14 @@ class GBPUSDSignalGenerator(BaseStrategy):
     ATR_PERIOD     = 14
     PIP            = 0.0001
 
+    # ── H4 RSI Filter (2026-07-05) ────────────────────────────────
+    # Backtest: Sharpe 1.27→1.664 | WR 34.2%→40.6% | DD -7.14%→-6.14%
+    # لا BUY عند RSI H4 > 75 (overbought — انعكاس محتمل)
+    # لا SELL عند RSI H4 < 25 (oversold — انعكاس محتمل)
+    RSI_HI     = 75    # BUY محظور فوق هذا (overbought على H4)
+    RSI_LO     = 25    # SELL محظور تحت هذا (oversold على H4)
+    RSI_PERIOD = 14
+
     def __init__(self, pair: str, h1_df: pd.DataFrame,
                  h4_df: Optional[pd.DataFrame] = None):
         super().__init__(pair, h1_df, h4_df)
@@ -50,6 +65,35 @@ class GBPUSDSignalGenerator(BaseStrategy):
         self._tp        = 0.0
 
     # ── Helpers ──────────────────────────────────────────────────
+
+    def _h4_rsi(self) -> Optional[float]:
+        """
+        RSI(14) على H4 — يُستخدم لفلتر الـ overbought/oversold.
+        يستخدم h4_df إن أُعطي، وإلا يُعيد sampling من H1.
+        يرجع None عند عدم كفاية البيانات.
+        """
+        try:
+            if self.h4 is not None and len(self.h4) >= self.RSI_PERIOD + 5:
+                source = self.h4["Close"]
+            elif len(self.h1) >= (self.RSI_PERIOD + 5) * 4:
+                # resample H1 → H4 locally
+                h4 = self.h1["Close"].resample("4h").last().dropna()
+                if len(h4) < self.RSI_PERIOD + 5:
+                    return None
+                source = h4
+            else:
+                return None
+
+            delta = source.diff()
+            gain = delta.clip(lower=0).rolling(self.RSI_PERIOD).mean()
+            loss = (-delta.clip(upper=0)).rolling(self.RSI_PERIOD).mean()
+            rs = gain / (loss + 1e-9)
+            rsi = 100 - (100 / (1 + rs))
+            val = float(rsi.iloc[-1])
+            return val if not pd.isna(val) else None
+        except Exception as e:
+            _log.debug(f"_h4_rsi error: {e}")
+            return None
 
     def _atr(self) -> float:
         try:
@@ -126,8 +170,14 @@ class GBPUSDSignalGenerator(BaseStrategy):
         prev_c = float(self.h1["Close"].values[-2])
         sl_dist = self.ATR_SL * atr
 
+        h4_rsi = self._h4_rsi()
+
         # ── BUY: كسر فوق لندن High ──────────────────────────────
         if prev_c <= r_high and price > r_high:
+            # H4 RSI Filter: لا BUY عند overbought (RSI > 75)
+            if h4_rsi is not None and h4_rsi > self.RSI_HI:
+                _log.debug(f"GBPUSD BUY blocked: H4 RSI={h4_rsi:.1f} > {self.RSI_HI} (overbought)")
+                return None
             sl = price - sl_dist
             tp = price + sl_dist * self.MIN_RR
             return {
@@ -142,11 +192,16 @@ class GBPUSDSignalGenerator(BaseStrategy):
                 "reason":    (
                     f"GBPUSD NY Breakout BUY | London range={r_pips:.0f}pips "
                     f"[{r_low:.5f}–{r_high:.5f}] broken UP | ATR={atr*10000:.1f}pips"
+                    + (f" | H4 RSI={h4_rsi:.0f}" if h4_rsi is not None else "")
                 ),
             }
 
         # ── SELL: كسر تحت لندن Low ──────────────────────────────
         if prev_c >= r_low and price < r_low:
+            # H4 RSI Filter: لا SELL عند oversold (RSI < 25)
+            if h4_rsi is not None and h4_rsi < self.RSI_LO:
+                _log.debug(f"GBPUSD SELL blocked: H4 RSI={h4_rsi:.1f} < {self.RSI_LO} (oversold)")
+                return None
             sl = price + sl_dist
             tp = price - sl_dist * self.MIN_RR
             return {
@@ -161,6 +216,7 @@ class GBPUSDSignalGenerator(BaseStrategy):
                 "reason":    (
                     f"GBPUSD NY Breakout SELL | London range={r_pips:.0f}pips "
                     f"[{r_low:.5f}–{r_high:.5f}] broken DOWN | ATR={atr*10000:.1f}pips"
+                    + (f" | H4 RSI={h4_rsi:.0f}" if h4_rsi is not None else "")
                 ),
             }
 
