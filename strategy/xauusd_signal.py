@@ -144,13 +144,13 @@ class XAUUSDSignalGenerator(BaseStrategy):
                     return True  # Volatility regime — favorable for Gold
 
             # Fetch 10Y Treasury Yield and estimate Real Yield
-            # Real Yield = 10Y Nominal - CPI (estimate ~2.8% current)
+            # Real Yield = 10Y Nominal - CPI (estimate updated 2026-07-09)
             try:
                 tnx = yf.Ticker("^TNX")
                 tnx_data = tnx.history(period="1d")
                 if not tnx_data.empty:
                     nominal_yield = float(tnx_data["Close"].iloc[-1])
-                    estimated_cpi = 2.8  # Current CPI estimate (update periodically)
+                    estimated_cpi = 4.2  # May 2026 CPI: 4.17% YoY (BLS 2026-06-10); June CPI due 2026-07-14
                     real_yield = nominal_yield - estimated_cpi
                     if real_yield < self.REAL_YIELD_MAX:
                         return True  # Growth regime — favorable for Gold

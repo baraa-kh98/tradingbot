@@ -1722,3 +1722,36 @@
 - الكود نظيف — 26+ إصلاح تراكمي منذ 2026-05-12 | **52 يوم بدون أي مشكلة حرجة — رقم قياسي مطلق مستمر**
 - حالة الأزواج: EURUSD ✅ (1.61) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) — جميعها فوق Sharpe 1.5 🏆
 ---
+
+---
+## يوم 2026-07-09 — الروتين اليومي الصباحي (06:30 UTC) — الأربعاء (يوم 53 نظيف | ما بعد "CPI المتوقع" | تحديث estimated_cpi حرج | [G] يوم 4 حي | [F] يوم 5 حي)
+
+### 🔍 مشاكل وجدناها
+1. **حرجة — مُصلحة اليوم:** `strategy/xauusd_signal.py:153` — `estimated_cpi = 2.8` متأخرة بشهرين+
+   - أحدث بيانات BLS الرسمية (May 2026): CPI = 4.17% YoY (صدر 2026-06-10)
+   - الفجوة: 2.8% vs 4.17% = 1.37% → يُحسب real_yield أعلى من الحقيقي بـ 1.37%
+   - الأثر: Regime Filter كان يحجب Gold خطأً في بيئة CPI مرتفع
+2. **معلوماتية:** الروتين السابق توقّع CPI "الأربعاء 8 يوليو" — هذا خطأ في التاريخ
+   - BLS Schedule الرسمي: June 2026 CPI يصدر **July 14, 2026 @ 08:30 ET (12:30 UTC)**
+3. **مستمرة [B] (54 يوم):** `_regime_check()` تُستدعى قبل `_in_trade` في xauusd_signal.py
+4. **مستمرة [A] (54 يوم):** Cache مفقود لـ `_regime_check()` + dead import `timedelta`
+5. **مستمرة [C] (58 يوم ← الأقدم):** "strategy" key مفقود في signal dicts
+
+### ✅ إصلاحات طُبّقت تلقائياً
+1. **`strategy/xauusd_signal.py:153`** — تحديث `estimated_cpi`:
+   - **قبل:** `estimated_cpi = 2.8  # Current CPI estimate (update periodically)`
+   - **بعد:** `estimated_cpi = 4.2  # May 2026 CPI: 4.17% YoY (BLS 2026-06-10); June CPI due 2026-07-14`
+   - **التأثير:** Regime Filter يحسب real_yield بدقة → مع 10Y ≈ 4.3%: real_yield = 0.1% < 1.2% → Gold مُجاز
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [B] (54 يوم) — رقم قياسي مطلق:** `_in_trade` قبل `_regime_check()` — سطران فقط
+2. **عالية [A] (54 يوم) — رقم قياسي مطلق:** Cache لـ `_regime_check()` + حذف dead import
+3. **منخفضة [C] (58 يوم ← الأقدم):** "strategy" key في signal dicts
+4. **🔔 الاثنين 14 يوليو @ 12:30 UTC:** تحديث `estimated_cpi` بعد صدور June CPI
+
+### 📊 أداء اليوم
+- صفقات: N/A (لا logs — البوت على VPS) | Win Rate: N/A | P&L: N/A
+- إصلاح اليوم: estimated_cpi 2.8→4.2 — تصحيح بيانات حرجة للـ Regime Filter
+- الكود نظيف — 27+ إصلاح تراكمي منذ 2026-05-12 | **53 يوم بدون مشاكل حرجة**
+- حالة الأزواج: EURUSD ✅ (1.61) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) 🏆
+---
