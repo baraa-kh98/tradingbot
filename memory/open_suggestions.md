@@ -1,6 +1,6 @@
 # اقتراحات مفتوحة — قيد الدراسة
 
-> آخر تحديث: 2026-07-09 (روتين صباحي — الأربعاء | يوم 53 نظيف | ✅ estimated_cpi 2.8→4.2 طُبّق | 🔔 June CPI → 14 يوليو 2026 | [A][B] 54 يوم | [C] 58 يوم ← الأقدم | يوم 4 حي [G] | يوم 5 حي [F])
+> آخر تحديث: 2026-07-13 (روتين صباحي — الأحد | يوم 57 نظيف | 🔬 Month-End Filter ❌ REJECTED | 🔴 June CPI غداً 14 يوليو @ 12:30 UTC | [A][B] 58 يوم | [C] 62 يوم ← الأقدم | يوم 8 حي [G] | يوم 9 حي [F])
 
 ---
 
@@ -52,8 +52,10 @@
   if datetime.now(timezone.utc).day >= 28:
       return None  # skip last 3 trading days of month
   ```
-- **يحتاج backtest** على `backtest_data/EURUSD_H1_2years.csv` و `GBPUSD_H1_2years.csv`
-- **الحالة:** 💡 فكرة — تحتاج backtest لتأكيد
+- **Backtest:** ❌ REJECTED — 2026-07-13
+  - EURUSD: Sharpe 1.602 → 1.447 (-0.155) | GBPUSD: Sharpe 1.088 → 1.026 (-0.062)
+  - الفلتر يُخفّض الأداء — أيام نهاية الشهر تُولّد صفقات جيدة في هذا النظام
+- **الحالة:** ❌ مرفوض نهائياً — لا تعديل
 
 ---
 
@@ -87,7 +89,15 @@
 - **الملف:** `strategy/xauusd_signal.py:153`
 - **القيمة الحالية:** `estimated_cpi = 4.2` — آخر تحديث: 2026-07-09 (May 2026 CPI = 4.17% YoY)
 - **التحديث القادم:** June 2026 CPI يصدر **14 يوليو 2026 @ 12:30 UTC** — تحديث فوري بعد الإعلان
-- **الحالة:** ✅ محدَّث اليوم → 🔔 تذكير تحديث 14 يوليو
+- **الحالة:** 🔴 **مجدول غداً الاثنين 14 يوليو @ 12:30 UTC**
+
+### [H] EURUSD — H4 MACD Filter *(جديد 2026-07-13)*
+- **الملف:** `strategy/eurusd_signal.py`
+- **الفرضية:** مشابه لـ H4 RSI Filter الناجح في GBPUSD — لا BUY عند MACD H4 Bearish | لا SELL عند MACD H4 Bullish
+- **المنطق:** MACD(12,26,9) على H4 → إذا MACD Line < Signal Line → Bearish H4 → لا BUY
+- **الهدف:** EURUSD Sharpe 1.61 → 1.75+ (تحسين مماثل لـ GBPUSD RSI)
+- **تاريخ الاكتشاف:** 2026-07-13
+- **الحالة:** 💡 فكرة جديدة — تحتاج Backtest الأسبوع القادم
 
 ### [11] XAUUSD — datetime.now() vs candle index للـ session filter *(2026-05-21)*
 - **الملف:** `strategy/xauusd_signal.py:176-180`
