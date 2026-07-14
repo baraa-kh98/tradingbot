@@ -1796,3 +1796,48 @@
 - 🔬 Backtest مُنجز: Month-End Filter ❌ REJECTED لكلا الزوجين
 - حالة الأزواج: EURUSD ✅ (1.61) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) 🏆 — جميعها فوق Sharpe 1.5 (يوم 8 متتالٍ)
 ---
+
+---
+## يوم 2026-07-14 — الروتين اليومي الصباحي (05:39 UTC) — الاثنين (يوم 58 نظيف ← رقم قياسي مطلق مستمر | 🔴 June CPI اليوم @ 12:30 UTC | 🔬 [H] EURUSD MACD Filter ❌ REJECTED | [A][B] 59 يوم | [C] 63 يوم ← الأقدم | يوم 9 حي [G] | يوم 10 حي [F])
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **58 يوماً متتالياً** ← رقم قياسي مطلق مستمر
+2. **مستمرة [B] (59 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:187` — `_regime_check()` تُستدعى قبل `_in_trade`
+3. **مستمرة [A] (59 يوم ← رقم قياسي مطلق):** `strategy/xauusd_signal.py:129` — Cache مفقود + dead import `timedelta`
+4. **مستمرة [C] (63 يوم ← الأقدم في تاريخ البوت كله):** إضافة "strategy" key في signal dicts
+5. **🔴 June CPI اليوم (14 يوليو @ 12:30 UTC):** تحديث `estimated_cpi` في `xauusd_signal.py:153` — أعلى أولوية في الروتين الليلي
+
+### ✅ بحث مُنجز اليوم — Backtest Run: 2026-07-14
+- **[H] EURUSD H4 MACD Filter Backtest** — `backtest/eurusd_macd_h4_filter.py` (جديد)
+- **الفرضية:** لا BUY عند MACD H4 Bearish | لا SELL عند MACD H4 Bullish — مشابه لـ [G] GBPUSD RSI
+
+| المقياس | Baseline | MACD Filter |
+|--------|---------|-------------|
+| Sharpe | 0.880 | 0.895 (+0.015) |
+| Return | +63.64% | +55.12% (-8.52%) |
+| Max DD | -10.88% | -11.77% (↓) |
+| Win Rate | 33.1% | 35.3% (+2.2%) |
+| Trades | 118 | 85 (-28%) |
+| PF | 1.625 | 1.742 |
+
+- **الاستنتاج:** ❌ REJECTED — هامش +0.015 ضعيف جداً | MaxDD يتفاقم | 28% تراجع في الصفقات
+- **السبب:** EURUSD ينفجر في كلا الاتجاهين بشكل متوازن → MACD يُصفّي الجانبين = يُعطّل ميزة الاستراتيجية
+- **المقارنة:** [G] GBPUSD RSI كان +0.391 Sharpe — فرق كبير يشرح سبب النجاح هناك
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (58 يوم متتالي)
+- مراجعة كاملة: eurusd_signal.py ✅ | gbpusd_signal.py ✅ | london_signal.py ✅ | xauusd_signal.py ✅ | risk_manager.py ✅
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [B] (59 يوم) — رقم قياسي مطلق:** `_in_trade` قبل `_regime_check()` — سطران فقط
+2. **عالية [A] (59 يوم) — رقم قياسي مطلق:** Cache لـ `_regime_check()` + حذف dead import
+3. **منخفضة [C] (63 يوم ← الأقدم):** "strategy" key في signal dicts
+4. **🔴 اليوم (14 يوليو @ 12:30 UTC):** تحديث `estimated_cpi` بعد صدور June CPI
+5. **الأسبوع القادم:** EURUSD ADX Threshold Backtest (بديل [H] المرفوض)
+
+### 📊 أداء اليوم
+- صفقات: N/A (لا logs — البوت على VPS) | Win Rate: N/A | P&L: N/A
+- 🔬 Backtest مُنجز: [H] EURUSD H4 MACD Filter ❌ REJECTED
+- 🔴 CPI يصدر اليوم @ 12:30 UTC — تحديث estimated_cpi أولوية قصوى
+- حالة الأزواج: EURUSD ✅ (1.61) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) 🏆 — جميعها فوق Sharpe 1.5 (يوم 9 متتالٍ)
+---
