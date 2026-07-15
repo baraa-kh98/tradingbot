@@ -1841,3 +1841,46 @@
 - 🔴 CPI يصدر اليوم @ 12:30 UTC — تحديث estimated_cpi أولوية قصوى
 - حالة الأزواج: EURUSD ✅ (1.61) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) 🏆 — جميعها فوق Sharpe 1.5 (يوم 9 متتالٍ)
 ---
+
+---
+## يوم 2026-07-15 — الروتين اليومي الصباحي (06:00 UTC) — الثلاثاء
+
+### 🔍 مشاكل وجدناها
+1. **⚠️ متوسطة (CPI):** `strategy/xauusd_signal.py:153` — `estimated_cpi = 4.2` (May) لم يُحدَّث بعد
+   - June 2026 CPI صدر أمس 2026-07-14 @ 12:30 UTC
+   - بيئة الكلاود لا تستطيع الوصول لـ yfinance/BLS API (403 proxy error مؤكَّد)
+   - التحديث يجب أن يتم يدوياً على VPS بالرقم الرسمي من BLS.gov
+2. **مستمرة (60 يوم ← رقم قياسي):** `strategy/xauusd_signal.py:186` — `_in_trade` بعد `_regime_check()` [B]
+3. **مستمرة (60 يوم ← رقم قياسي):** `strategy/xauusd_signal.py:129` — `_regime_check()` بدون Cache [A]
+4. **مستمرة (64 يوم ← الأقدم مطلقاً):** إضافة "strategy" key في signal dicts [C]
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (59 يوم متتالي)
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [B] (60 يوم) — رقم قياسي مطلق:** `_in_trade` قبل `_regime_check()` — سطران فقط
+2. **عالية [A] (60 يوم) — رقم قياسي مطلق:** Cache لـ `_regime_check()` + حذف dead import
+3. **منخفضة [C] (64 يوم ← الأقدم):** "strategy" key في signal dicts
+4. **[CPI] على VPS:** تحديث `estimated_cpi` بقيمة June 2026 (صدر 2026-07-14)
+5. **[I] ADX=18 (مُعلَّق):** تأكيد بـ eurusd_research.py قبل التطبيق
+
+### 🔬 Backtest مُنجز اليوم — EURUSD ADX Threshold [I]
+- **الملف:** `backtest/eurusd_adx_filter.py` (مُنشأ 2026-07-15)
+- **الهدف:** بديل [H] MACD المرفوض — تصفية direction-neutral للأسواق الجانبية
+
+| ADX_MIN | Sharpe | Return | Max DD | WR% | Trades |
+|---------|--------|--------|--------|-----|--------|
+| BASELINE | 3.217 | +67.50% | -18.63% | 33.3% | 120 |
+| 18 ⭐ | 4.029 | +69.60% | -16.27% | 35.3% | 102 |
+| 30 | 4.053 | +27.23% | -13.19% | 34.7% | 49 |
+
+- **المرشح الأفضل: ADX_MIN=18** (Δ Sharpe +0.812 | MaxDD أحسن | WR أحسن | 102 صفقة = إحصائياً كافٍ)
+- **ADX=30 مرفوض:** 49 صفقة فقط (هش إحصائياً) + Return ينخفض 60%
+- **القرار: ⏳ PENDING — ينتظر تأكيد eurusd_research.py**
+  - إذا Sharpe الرسمي الجديد ≥ 1.71 → تطبيق فوري على `strategy/eurusd_signal.py`
+
+### 📊 أداء اليوم
+- صفقات: N/A (لا logs — البوت على VPS) | Win Rate: N/A | P&L: N/A
+- 🔬 Backtest مُنجز: [I] EURUSD ADX Threshold — ADX=18 مرشح (ينتظر تأكيد)
+- حالة الأزواج: EURUSD ✅ (1.61) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) 🏆
+---
