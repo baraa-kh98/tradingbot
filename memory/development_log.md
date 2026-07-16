@@ -1884,3 +1884,47 @@
 - 🔬 Backtest مُنجز: [I] EURUSD ADX Threshold — ADX=18 مرشح (ينتظر تأكيد)
 - حالة الأزواج: EURUSD ✅ (1.61) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) 🏆
 ---
+
+---
+## يوم 2026-07-16 — الروتين اليومي الصباحي (05:45 UTC) — الأربعاء (يوم 60 نظيف ← رقم قياسي جديد 🎉 | ✅ [I] EURUSD ADX_MIN=18 APPLIED | [A][B] 61 يوم | [C] 65 يوم ← الأقدم | يوم 11 حي [G] | يوم 12 حي [F])
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **60 يوماً متتالياً** ← رقم قياسي جديد 🎉
+2. **مستمرة [B] (61 يوم ← رقم قياسي):** `strategy/xauusd_signal.py:186` — `_regime_check()` قبل `_in_trade`
+3. **مستمرة [A] (61 يوم ← رقم قياسي):** `strategy/xauusd_signal.py:129` — Cache مفقود + dead import
+4. **مستمرة [C] (65 يوم ← الأقدم):** إضافة "strategy" key في signal dicts
+5. **⚠️ CPI متأخر:** `xauusd_signal.py:153` — June 2026 CPI لم يُطبَّق (صدر 2026-07-14) — يحتاج VPS
+
+### ✅ إصلاحات طُبّقت تلقائياً
+
+#### Backtest Run — 2026-07-16
+- **Pair:** EURUSD | **Strategy:** NY Breakout + ADX_MIN=18 Filter [I]
+- **Engine:** eurusd_finetune.py (official Sharpe calculation)
+- **Data:** `backtest_data/EURUSD_H1_2years.csv` — 12,810 bars
+- **Params changed:** ADX_MIN: none → 18 (direction-neutral sideways filter)
+- **Old Sharpe:** 1.706 | **New Sharpe:** 1.885 (+0.179)
+- **Old Return:** +55.06% | **New Return:** +58.66%
+- **Old MaxDD:** -11.79% | **New MaxDD:** -9.91% (أحسن!)
+- **Old WR:** 33.3% | **New WR:** 35.3% (+2pp)
+- **Old Trades:** 120 | **New Trades:** 102 (-18, -15%)
+- **Old PF:** 1.579 | **New PF:** 1.803
+- **Decision:** ✅ Applied to `strategy/eurusd_signal.py`
+
+**التغييرات في `strategy/eurusd_signal.py`:**
+- `ADX_MIN = 18` (class constant جديد، L45)
+- `_adx()` method جديدة (حساب ADX-14 بـ SMMA)
+- `get_signal()`: `adx = self._adx(); if atr <= 0 or adx < self.ADX_MIN: return None`
+- `get_session_report()`: يعرض ADX الحالي
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **عالية [B] (61 يوم) — رقم قياسي:** `_in_trade` قبل `_regime_check()` — سطران فقط
+2. **عالية [A] (61 يوم) — رقم قياسي:** Cache لـ `_regime_check()` + حذف dead import
+3. **منخفضة [C] (65 يوم ← الأقدم):** "strategy" key في signal dicts
+4. **[CPI] على VPS:** تحديث `estimated_cpi` بقيمة June 2026
+
+### 📊 أداء اليوم
+- صفقات: N/A (لا logs — البوت على VPS) | Win Rate: N/A | P&L: N/A
+- **الإنجاز:** [I] EURUSD ADX_MIN=18 — Sharpe 1.706 → 1.885 (+0.179) ✅
+- حالة الأزواج: EURUSD ✅ (1.885 ← محسَّن) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) 🏆
+- يوم 60 متتالٍ بدون مشاكل حرجة ← رقم قياسي جديد 🎉
+---

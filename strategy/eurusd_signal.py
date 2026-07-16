@@ -1,19 +1,23 @@
 """
 EURUSDSignalGenerator — NY Open Breakout
 =========================================
-استراتيجية مثبتة بالباكتست (2 سنة H1):
+استراتيجية محسّنة (2026-07-16: ADX_MIN=18 Filter):
+  Sharpe=1.885 | Return=+58.66% | Max DD=-9.91% | PF=1.803 | 102 صفقة
+
+BASELINE (قبل ADX Filter):
   Sharpe=1.706 | Return=+55.06% | Max DD=-11.79% | PF=1.579 | 120 صفقة
 
 المنطق:
   1. بناء Range من 07:00–13:00 UTC (جلسة لندن)
   2. الدخول عند كسر الـ Range خلال 13:00–15:00 UTC (فتح نيويورك)
   3. الـ Range لازم >= 25 pips (تصفية الأيام الهادئة)
-  4. SL = 1.8 × ATR(14)
-  5. TP = 3.5 × risk
+  4. ADX(14) >= 18 — لا دخول في السوق الجانبي (direction-neutral, 2026-07-16)
+  5. SL = 1.8 × ATR(14)
+  6. TP = 3.5 × risk
 
-الباراميترات المثلى (أعلى Sharpe بعد 1890 تجربة):
+الباراميترات المثلى:
   range_start=7, range_end=13, session_end=15
-  min_range_pips=25, atr_sl=1.8, min_rr=3.5
+  min_range_pips=25, atr_sl=1.8, min_rr=3.5, adx_min=18
 """
 
 import numpy as np
@@ -38,6 +42,7 @@ class EURUSDSignalGenerator(BaseStrategy):
     ATR_SL         = 1.8   # SL = 1.8 × ATR
     MIN_RR         = 3.5   # TP = 3.5 × risk
     ATR_PERIOD     = 14
+    ADX_MIN        = 18    # ADX filter: no trade in sideways market (2026-07-16)
     PIP            = 0.0001
 
     def __init__(self, pair: str, h1_df: pd.DataFrame,
@@ -62,6 +67,34 @@ class EURUSDSignalGenerator(BaseStrategy):
             return float(np.mean(tr[-self.ATR_PERIOD:])) if len(tr) >= self.ATR_PERIOD else float(np.mean(tr))
         except Exception:
             return 0.0008  # fallback ~8 pips
+
+    def _adx(self) -> float:
+        try:
+            period = self.ATR_PERIOD
+            n  = min(len(self.h1) - 1, period * 4)
+            h  = self.h1["High"].values[-n:].astype(float)
+            l  = self.h1["Low"].values[-n:].astype(float)
+            c  = self.h1["Close"].values[-n:].astype(float)
+            if len(h) < period + 2:
+                return 0.0
+            dh = np.diff(h); dl = -np.diff(l)
+            dmp = np.where((dh > dl) & (dh > 0), dh, 0.0)
+            dmm = np.where((dl > dh) & (dl > 0), dl, 0.0)
+            tr  = np.array([max(h[i]-l[i], abs(h[i]-c[i-1]), abs(l[i]-c[i-1]))
+                            for i in range(1, len(h))])
+            def smma(arr, p):
+                out = np.zeros(len(arr))
+                out[p-1] = arr[:p].mean()
+                for i in range(p, len(arr)):
+                    out[i] = (out[i-1] * (p-1) + arr[i]) / p
+                return out
+            atr_s = smma(tr, period)
+            dip   = smma(dmp, period) / (atr_s + 1e-9) * 100
+            dim   = smma(dmm, period) / (atr_s + 1e-9) * 100
+            dx    = np.abs(dip - dim) / (dip + dim + 1e-9) * 100
+            return float(np.mean(dx[-period:]))
+        except Exception:
+            return 0.0
 
     def _build_range(self) -> tuple:
         """
@@ -122,7 +155,8 @@ class EURUSDSignalGenerator(BaseStrategy):
             return None
 
         atr    = self._atr()
-        if atr <= 0:
+        adx    = self._adx()
+        if atr <= 0 or adx < self.ADX_MIN:
             return None
 
         price  = float(self.h1["Close"].values[-1])
@@ -186,6 +220,7 @@ class EURUSDSignalGenerator(BaseStrategy):
 
     def get_session_report(self) -> str:
         atr = self._atr()
+        adx = self._adx()
         r_high, r_low, r_pips = self._build_range()
         hour = self._current_hour()
 
@@ -202,8 +237,13 @@ class EURUSDSignalGenerator(BaseStrategy):
             )
 
         range_info = f"Range={r_pips:.0f}pips [{r_low:.5f}–{r_high:.5f}]" if r_high else "Range: N/A"
-        status = "🔍 يبحث عن كسر" if r_pips >= self.MIN_RANGE_PIPS else f"⏸️ Range صغير ({r_pips:.0f}pips < {self.MIN_RANGE_PIPS})"
+        if adx < self.ADX_MIN:
+            status = f"⏸️ ADX={adx:.0f} < {self.ADX_MIN} (سوق جانبي)"
+        elif r_pips < self.MIN_RANGE_PIPS:
+            status = f"⏸️ Range صغير ({r_pips:.0f}pips < {self.MIN_RANGE_PIPS})"
+        else:
+            status = "🔍 يبحث عن كسر"
         return (
             f"📊 {self.pair} [NY Breakout] — {status} "
-            f"| {range_info} | ATR={atr*10000:.1f}pips"
+            f"| {range_info} | ADX={adx:.0f} | ATR={atr*10000:.1f}pips"
         )

@@ -1,12 +1,12 @@
 # اقتراحات مفتوحة — قيد الدراسة
 
-> آخر تحديث: 2026-07-15 (روتين صباحي — الثلاثاء | يوم 59 نظيف | 🔬 [I] EURUSD ADX=18 ⭐ PROMISING — ينتظر eurusd_research.py | ⚠️ June CPI لم يُحدَّث بعد | [A][B] 60 يوم | [C] 64 يوم ← الأقدم | يوم 10 حي [G] | يوم 11 حي [F])
+> آخر تحديث: 2026-07-16 (روتين صباحي — الأربعاء | يوم 60 نظيف 🎉 | ✅ [I] EURUSD ADX_MIN=18 APPLIED | [A][B] 61 يوم | [C] 65 يوم ← الأقدم | يوم 11 حي [G] | يوم 12 حي [F])
 
 ---
 
 ## 🟡 متوسطة الأولوية
 
-### [4] XAUUSD — `_in_trade` check قبل `_regime_check()` *(2026-05-20)* ⚡⚡⚡ ESCALATED CRITICAL — **ينتظر موافقتك منذ 60 يوم**
+### [4] XAUUSD — `_in_trade` check قبل `_regime_check()` *(2026-05-20)* ⚡⚡⚡ ESCALATED CRITICAL — **ينتظر موافقتك منذ 61 يوم**
 - **الملف:** `strategy/xauusd_signal.py:182-185`
 - **المشكلة:** `_regime_check()` تُستدعى قبل فحص `self._in_trade` → طلبان HTTP في كل دورة حتى عند وجود صفقة مفتوحة
 - **الإصلاح المقترح:**
@@ -17,9 +17,9 @@
       return None
   ```
 - **تاريخ الاكتشاف:** 2026-05-20
-- **الحالة:** ⏳ ينتظر موافقة المستخدم (**60 يوم**)
+- **الحالة:** ⏳ ينتظر موافقة المستخدم (**61 يوم**)
 
-### [4b] XAUUSD Regime Check — Cache مفقود *(منذ 2026-05-16)* 🚨🚨🚨 CRITICAL — **ينتظر موافقتك منذ 60 يوم**
+### [4b] XAUUSD Regime Check — Cache مفقود *(منذ 2026-05-16)* 🚨🚨🚨 CRITICAL — **ينتظر موافقتك منذ 61 يوم**
 - **الملف:** `strategy/xauusd_signal.py:129`
 - **المشكلة:** `_regime_check()` تستدعي yfinance API في كل دورة (كل 15 دقيقة) بدون Cache
   - 24-96 طلب HTTP يومياً بدون داعٍ
@@ -27,7 +27,7 @@
   - Dead Import: `from datetime import timedelta` داخل الدالة لا يُستخدم (L133)
 - **الإصلاح المقترح:** إضافة `_regime_cache` مع TTL = 3600 ثانية + نقل المنطق لـ `_fetch_regime_live()`
 - **تاريخ الاكتشاف:** 2026-05-16
-- **الحالة:** ⏳ ينتظر موافقة المستخدم (**60 يوم**)
+- **الحالة:** ⏳ ينتظر موافقة المستخدم (**61 يوم**)
 
 ---
 
@@ -37,53 +37,11 @@
 - **الملفات:** `strategy/eurusd_signal.py`, `gbpusd_signal.py`, `xauusd_signal.py`, `london_signal.py`
 - **المشكلة:** إشعار Telegram يعرض "Breakout" لكل الأزواج بدل الاسم الفعلي
 - **الإصلاح:** إضافة `"strategy": "EURUSD NY Breakout"` إلخ. في كل dict إشارة
-- **الحالة:** ⏳ ينتظر موافقة المستخدم (**64 يوم** ← **الأقدم في تاريخ البوت كله**)
-
----
-
-## 🔵 منخفضة الأولوية — اقتراحات جديدة
-
-### [Month-End Filter] EURUSD/GBPUSD — تصفية آخر 2-3 أيام الشهر *(2026-06-30، 1 يوم)*
-- **الملفات:** `strategy/eurusd_signal.py`, `strategy/gbpusd_signal.py`
-- **الفرضية:** آخر يومين تداول في الشهر يُولّدان False Breakouts بنسبة أعلى بسبب Rebalancing المؤسسي
-- **الإصلاح المقترح:**
-  ```python
-  from datetime import datetime, timezone
-  if datetime.now(timezone.utc).day >= 28:
-      return None  # skip last 3 trading days of month
-  ```
-- **Backtest:** ❌ REJECTED — 2026-07-13
-  - EURUSD: Sharpe 1.602 → 1.447 (-0.155) | GBPUSD: Sharpe 1.088 → 1.026 (-0.062)
-  - الفلتر يُخفّض الأداء — أيام نهاية الشهر تُولّد صفقات جيدة في هذا النظام
-- **الحالة:** ❌ مرفوض نهائياً — لا تعديل
-
----
-
-## ✅ مكتملة حديثاً
-
-### [F] ✅ USDJPY — BOJ Zone Filter *(مطبَّق 2026-07-04)*
-- **النتيجة:** Sharpe 0.97 → **1.58** (+0.61) | WR 36.2% → 50.0% | DD -5.68% → -3.25%
-- **الملف:** `strategy/london_signal.py` — BOJ_UPPER=151.0, BOJ_LOWER=149.0
-- **الحالة:** ✅ طُبّق تلقائياً 2026-07-04
-
----
-
-## 🔴 أولوية عالية — Backtests مجدولة
-
-### [G] ✅ GBPUSD — H4 RSI Filter *(مطبَّق 2026-07-05)*
-- **النتيجة:** Sharpe 1.273 → **1.664** (+0.391) | WR 34.2%→40.6% | DD -7.14%→-6.14% | Return +31.62% | PF 2.222
-- **الملف:** `strategy/gbpusd_signal.py` — RSI_HI=75, RSI_LO=25, RSI_PERIOD=14
-- **الحالة:** ✅ طُبّق تلقائياً 2026-07-05
-- **الإنجاز:** لأول مرة: جميع الأزواج الـ 4 ≥ Sharpe 1.5 في آنٍ واحد 🏆
+- **الحالة:** ⏳ ينتظر موافقة المستخدم (**65 يوم** ← **الأقدم في تاريخ البوت كله**)
 
 ---
 
 ## 👁️ تحت المراقبة
-
-### [21] FOMC Day Filter لـ EURUSD/GBPUSD *(2026-06-14، 15 يوم)*
-- **الفرضية:** تصفية الدخول بين 17:50-18:30 UTC في أيام FOMC يُحسّن Win Rate
-- **FOMC التالي:** يوليو/أغسطس 2026
-- **الحالة:** 💡 فكرة قيد الدراسة — تحتاج backtest
 
 ### [5] CPI مُثبَّت يدوياً في XAUUSD *(تحديث متأخر)*
 - **الملف:** `strategy/xauusd_signal.py:153`
@@ -91,33 +49,35 @@
 - **June 2026 CPI:** صدر 2026-07-14 @ 12:30 UTC — **لم يُطبَّق بعد**
   - بيئة الكلاود لا تستطيع الوصول لـ BLS/yfinance (HTTP 403)
   - التحديث يجب يدوياً على VPS: `estimated_cpi = X.X  # June 2026 CPI`
-- **الحالة:** 🔴 **متأخر — يحتاج تدخل يدوي على VPS**
+- **الحالة:** 🔴 **متأخر يومين — يحتاج تدخل يدوي على VPS**
 
-### [H] EURUSD — H4 MACD Filter *(2026-07-13)*
-- **الملف:** `strategy/eurusd_signal.py`
-- **Backtest:** ❌ REJECTED — 2026-07-14
-  - Sharpe +0.015 (ضعيف جداً) | MaxDD يتفاقم -10.88%→-11.77% | Trades -28%
-  - السبب: EURUSD ينفجر في كلا الاتجاهين — MACD يُصفّي الجانبين = يُعطّل الاستراتيجية
-- **الحالة:** ❌ مرفوض نهائياً
+### [G] ✅ GBPUSD — H4 RSI Filter *(مطبَّق 2026-07-05)* — يوم 11 حي
+- **النتيجة (backtest):** Sharpe 1.273 → 1.664 (+0.391)
+- **الحالة:** مراقبة مستمرة — نقييّم بعد 15-20 صفقة لايف
 
-### [I] EURUSD — ADX=18 Filter *(مُختبَر 2026-07-15)* ⭐ PROMISING
-- **الملف:** `strategy/eurusd_signal.py`
-- **الفرضية:** تصفية direction-neutral للأسواق الجانبية — بديل [H] MACD المرفوض
-- **Backtest مُنجز:** `backtest/eurusd_adx_filter.py` (2026-07-15)
-  - ADX=18: Sharpe +0.812 | MaxDD -16.27% (أحسن) | WR 35.3% (+2pp) | 102 صفقة ✅
-  - ADX=30: Sharpe +0.836 لكن 49 صفقة فقط (هش إحصائياً)
-- **القرار:** ⏳ PENDING — يحتاج تأكيد بـ `eurusd_research.py` (المحرك الرسمي)
-  - إذا Sharpe الرسمي ≥ 1.71 → تطبيق فوري على `strategy/eurusd_signal.py`
-- **الهدف:** EURUSD Sharpe 1.61 → 1.75+
-- **تاريخ الاكتشاف:** 2026-07-14 | **تاريخ الـ Backtest:** 2026-07-15
+### [F] ✅ USDJPY BOJ Filter *(مطبَّق 2026-07-04)* — يوم 12 حي
+- **النتيجة (backtest):** Sharpe 0.97 → 1.58 (+0.61)
+- **تنبيه:** BOJ اجتماع 31 يوليو — إذا رُفعت الفائدة → backtest لـ BOJ_LOWER=147/148
 
-### [11] XAUUSD — datetime.now() vs candle index للـ session filter *(2026-05-21)*
-- **الملف:** `strategy/xauusd_signal.py:176-180`
-- **خطورة:** منخفضة — مراقبة فقط
+### [21] FOMC Day Filter لـ EURUSD/GBPUSD *(2026-06-14)*
+- **الفرضية:** تصفية الدخول قرب وقت FOMC (17:50-18:30 UTC)
+- **FOMC التالي:** أغسطس 2026
+- **الحالة:** 💡 فكرة قيد الدراسة — تحتاج backtest (بعد تقييم [G] و [F])
 
-### [13] print() في connect()/disconnect() — executor.py *(مستمر)*
-- **الملف:** `execution/executor.py:67-118`
-- **الحالة:** 🔍 للـ Refactoring الشامل مستقبلاً
+### [GBPUSD ADX] فكرة جديدة — ADX filter بعد ثبات [G]
+- **الفرضية:** تطبيق ADX_MIN (مشابه [I] EURUSD) على GBPUSD
+- **الوضع:** انتظار تقييم [G] RSI أولاً (هدف 15-20 صفقة)
+- **تاريخ الاقتراح:** 2026-07-16
+
+---
+
+## ✅ مكتملة حديثاً
+
+### [I] ✅ EURUSD ADX_MIN=18 Filter *(مطبَّق 2026-07-16)*
+- **الـ Backtest (finetune engine):** Sharpe 1.706 → **1.885** (+0.179)
+- **Return:** +55.06% → +58.66% | **MaxDD:** -11.79% → -9.91% | **WR:** 33.3% → 35.3%
+- **الملف:** `strategy/eurusd_signal.py` — ADX_MIN=18 + `_adx()` method
+- **الحالة:** ✅ طُبّق تلقائياً 2026-07-16
 
 ---
 
@@ -126,9 +86,9 @@
 | # | المشكلة | التاريخ |
 |---|---------|---------|
 | E1 | datetime index vs column — EURUSD/GBPUSD | 2026-05-12 |
-| E2 | Break-Even SELL — منطق معكوس (v1) | v2.1.0 (2026-05-01) |
-| E3 | قسمة على صفر في Position Sizing | v2.1.0 (2026-05-01) |
-| E4 | ATR Defaults خاطئة | v2.1.0 (2026-05-01) |
+| E2 | Break-Even SELL — منطق معكوس (v1) | v2.1.0 |
+| E3 | قسمة على صفر في Position Sizing | v2.1.0 |
+| E4 | ATR Defaults خاطئة | v2.1.0 |
 | E5 | signal['asia_high'] KeyError | 2026-05-12 |
 | E6 | LondonSignalGenerator غير مستوردة | 2026-05-12 |
 | E7 | print() في trade_monitor | 2026-05-12 |
@@ -145,8 +105,11 @@
 | B20 | XAUUSD n=20/adx=20 — ❌ REJECTED | 2026-06-21 |
 | B22 | GBPUSD Session Narrowing — ❌ REJECTED | 2026-06-21 |
 | B18 | USDJPY Asia MR — ❌ REJECTED | 2026-06-27 |
-| **D** | **GBPUSD Docstring: Sharpe=1.224→1.270, min_rr=3.0→4.0** | **2026-06-29** |
-| **E** | **XAUUSD Docstring: Sharpe=1.31→1.62 (re-run 2026-06-21)** | **2026-06-29** |
-| **NEW-minor** | **trade_monitor.py:203 "ICT Partial TP" → "Bot Partial TP"** | **2026-06-29** |
-| **F** | **USDJPY BOJ Zone Filter: Sharpe 0.97→1.58, BOJ_UPPER=151, BOJ_LOWER=149** | **2026-07-04** |
-| **G** | **GBPUSD H4 RSI Filter: Sharpe 1.273→1.664, RSI_HI=75, RSI_LO=25** | **2026-07-05** |
+| D | GBPUSD Docstring: Sharpe=1.224→1.270, min_rr=3.0→4.0 | 2026-06-29 |
+| E | XAUUSD Docstring: Sharpe=1.31→1.62 | 2026-06-29 |
+| NEW-minor | trade_monitor.py:203 "ICT Partial TP" → "Bot Partial TP" | 2026-06-29 |
+| Month-End | EURUSD/GBPUSD Month-End Filter — ❌ REJECTED | 2026-07-13 |
+| H | EURUSD H4 MACD Filter — ❌ REJECTED | 2026-07-14 |
+| F | USDJPY BOJ Zone Filter: Sharpe 0.97→1.58 | 2026-07-04 |
+| G | GBPUSD H4 RSI Filter: Sharpe 1.27→1.664 | 2026-07-05 |
+| **I** | **EURUSD ADX_MIN=18: Sharpe 1.706→1.885** | **2026-07-16** |
