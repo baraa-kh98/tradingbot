@@ -1972,3 +1972,56 @@
 - حالة الأزواج: EURUSD ✅ (1.885) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) 🏆
 - يوم 61 متتالٍ بدون مشاكل حرجة ✅
 ---
+
+---
+## يوم 2026-07-18 — الروتين اليومي الصباحي (05:45 UTC) — الجمعة (يوم 62 نظيف | ❌ [J] GBPUSD ADX REJECTED نهائي | ✅ BOJ Prep جاهز | [A][B] 63 يوم | [C] 67 يوم ← الأقدم | يوم 14 [F] | يوم 13 [G] | يوم 2 [I] | BOJ 31 يوليو: 13 يوماً)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **62 يوماً متتالياً**
+2. **مستمرة [B] (63 يوم ← رقم قياسي):** `strategy/xauusd_signal.py:186` — `_regime_check()` قبل `_in_trade`
+3. **مستمرة [A] (63 يوم ← رقم قياسي):** `strategy/xauusd_signal.py:129` — Cache مفقود + dead import `timedelta`
+4. **مستمرة [C] (67 يوم ← الأقدم):** إضافة "strategy" key في signal dicts
+5. **⚠️ CPI متأخر 4 أيام:** `xauusd_signal.py:153` — June 2026 CPI (صدر 2026-07-14) لم يُطبَّق
+
+### 🔬 Backtest Runs — 2026-07-18
+
+#### [J] GBPUSD ADX Filter — ❌ REJECTED نهائياً
+- **Engine:** backtest/gbpusd_adx_filter.py | **Data:** GBPUSD_H1_2years.csv
+- **النتيجة:** ADX=18 → Sharpe +0.293 لكن 20 صفقة فقط (دون عتبة 25)
+- **ADX=15 (25 صفقة):** Sharpe أسوأ بـ -0.058 vs baseline
+- **القرار: ❌ REJECTED نهائياً — لا ADX filter لـ GBPUSD**
+- GBPUSD يبقى: RSI_HI=75/RSI_LO=25 بدون ADX
+
+#### [BOJ Prep] USDJPY BOJ_LOWER Emergency Test — ✅ جاهز
+- **Engine:** backtest/usdjpy_boj_lower_test.py (مُنشأ 2026-07-18)
+- **الهدف:** خطة طوارئ لاجتماع BOJ 31 يوليو 2026
+- **Data:** USDJPY_H1_2years.csv (14,408 bars | 2024-01-01 → 2026-04-05)
+
+| BOJ_LOWER | Sharpe | Trades | النتيجة |
+|-----------|--------|--------|---------|
+| 145/147 | 0.824 | 57 | أسوأ (-0.115) |
+| 148 | 0.939 | 55 | مكافئ تماماً للحالي |
+| **149 ← الحالي** | **0.939** | **55** | المرجع |
+| 150 | 0.850 | 53 | أسوأ (-0.089) |
+| 151 | 0.757 | 51 | أسوأ (-0.182) |
+
+- **الاستنتاج: BOJ_LOWER=149 هو الأفضل** — لا تغيير حتى بعد BOJ
+- **48/149 متطابقان** — النظام محمي طبيعياً لكل السيناريوهات
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (62 يوم متتالي)
+- مراجعة syntax: eurusd_signal.py ✅ | gbpusd_signal.py ✅ | xauusd_signal.py ✅ | london_signal.py ✅
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة [B] (63 يوم) — رقم قياسي:** `_in_trade` قبل `_regime_check()` — سطران فقط
+2. **متوسطة [A] (63 يوم) — رقم قياسي:** Cache لـ `_regime_check()` + حذف dead import
+3. **منخفضة [C] (67 يوم ← الأقدم):** "strategy" key في signal dicts
+4. **[CPI] على VPS:** تحديث `estimated_cpi` بقيمة June 2026 (متأخر 4 أيام)
+
+### 📊 أداء اليوم
+- صفقات: N/A (لا logs — البوت على VPS) | Win Rate: N/A | P&L: N/A
+- 🔬 [J] GBPUSD ADX ← ❌ REJECTED نهائياً (20 صفقة / لا threshold يمر المعيار)
+- 🛡️ BOJ Emergency Test ← ✅ جاهز (BOJ_LOWER=149 يبقى، لا تغيير للـ 31 يوليو)
+- حالة الأزواج: EURUSD ✅ (1.885) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) 🏆
+- يوم 62 متتالٍ بدون مشاكل حرجة ✅ | يوم 13 الـ 4 أزواج فوق Sharpe 1.5 🏆
+---
