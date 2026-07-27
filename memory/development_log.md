@@ -2258,3 +2258,33 @@
 - حالة الأزواج: EURUSD ✅ (1.885) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) 🏆
 - يوم 70 متتالٍ بدون مشاكل حرجة ✅ ← رقم قياسي | يوم 21 الـ 4 أزواج فوق Sharpe 1.5 🏆
 ---
+
+---
+## يوم 2026-07-27 — الروتين اليومي الصباحي (05:40 UTC) — الاثنين (يوم 71 نظيف ← رقم قياسي مستمر 🎉 | السوق يفتح اليوم | [A][B] 72 يوم ← رقم قياسي | [C] 76 يوم ← الأقدم | يوم 22 حي [G] 🎯 | يوم 23 حي [F] | يوم 11 حي [I] | BOJ 31 يوليو: 4 أيام 🚨 | CPI متأخر 13 يوم)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **71 يوماً متتالياً** ← رقم قياسي مستمر 🎉
+2. **مستمرة [B] (72 يوم ← رقم قياسي):** `strategy/xauusd_signal.py:187` — `_regime_check()` قبل `_in_trade`
+3. **مستمرة [A] (72 يوم ← رقم قياسي):** `strategy/xauusd_signal.py:129/136` — Cache مفقود + dead import `timedelta`
+4. **مستمرة [C] (76 يوم ← الأقدم في تاريخ البوت):** إضافة "strategy" key في signal dicts
+5. **🚨 BOJ اجتماع 31 يوليو: 4 أيام** — أسبوع حساس جداً — BOJ_LOWER=149 جاهز ومُختبَر ✅
+6. **⚠️ CPI متأخر 13 يوماً:** `xauusd_signal.py:153` — June 2026 CPI لم يُطبَّق — يحتاج VPS عاجل قبل الخميس
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (71 يوم متتالي ← رقم قياسي)
+- Syntax check (py_compile): eurusd_signal.py ✅ | gbpusd_signal.py ✅ | xauusd_signal.py ✅ | london_signal.py ✅ | risk_manager.py ✅ | trade_monitor.py ✅ | main.py ✅
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة [B] (72 يوم) — رقم قياسي:** `_in_trade` قبل `_regime_check()` — سطران فقط
+2. **متوسطة [A] (72 يوم) — رقم قياسي:** Cache لـ `_regime_check()` + حذف dead import
+3. **منخفضة [C] (76 يوم ← الأقدم):** "strategy" key في signal dicts
+4. **[CPI] على VPS:** تحديث `estimated_cpi` بقيمة June 2026 (متأخر 13 يوم — عاجل قبل BOJ الخميس)
+5. **💡 [21]:** FOMC August 2026 Filter لـ EURUSD/GBPUSD — backtest مقترح هذا الأسبوع
+6. **💡 [22]:** XAUUSD BOJ/FOMC ± 24h ATR threshold رفع — backtest مقترح
+
+### 📊 أداء اليوم
+- صفقات: N/A (لا logs — البوت على VPS) | Win Rate: N/A | P&L: N/A
+- الاثنين: السوق يفتح — London 07:00 UTC (USDJPY + XAUUSD) | NY 13:00 UTC (EURUSD + GBPUSD)
+- حالة الأزواج: EURUSD ✅ (1.885) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) 🏆
+- يوم 71 متتالٍ بدون مشاكل حرجة ✅ ← رقم قياسي | يوم 22 الـ 4 أزواج فوق Sharpe 1.5 🏆
+---
