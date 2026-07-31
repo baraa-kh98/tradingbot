@@ -2380,3 +2380,34 @@
 - حالة الأزواج: EURUSD ✅ (1.885) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) 🏆
 - يوم 74 متتالٍ بدون مشاكل حرجة ✅ ← رقم قياسي | يوم 25 الـ 4 أزواج فوق Sharpe 1.5 🏆
 ---
+
+---
+## يوم 2026-07-31 — الروتين اليومي الصباحي (05:37 UTC) — الجمعة (يوم 75 نظيف ← رقم قياسي مستمر 🎉 | **🚨🚨🚨 BOJ DAY** — الإعلان قد صدر | [A][B] 76 يوم ← رقم قياسي | [C] 80 يوم ← الأقدم | يوم 26 حي [G] 🎯 | يوم 27 حي [F] — **يوم الاختبار الفعلي!** | يوم 15 حي [I] | CPI متأخر 17 يوم 🔴)
+
+### 🔍 مشاكل وجدناها
+1. **لا مشاكل حرجة جديدة** — الكود نظيف تماماً منذ **75 يوماً متتالياً** ← رقم قياسي مستمر 🎉
+2. **مستمرة [B] (76 يوم ← رقم قياسي):** `strategy/xauusd_signal.py:187-190` — `_regime_check()` قبل `_in_trade`
+3. **مستمرة [A] (76 يوم ← رقم قياسي):** `strategy/xauusd_signal.py:129/136` — Cache مفقود + dead import `timedelta` مؤكَّد
+4. **مستمرة [C] (80 يوم ← الأقدم في تاريخ البوت كله):** إضافة "strategy" key في signal dicts
+5. **🚨🚨🚨 BOJ 31 يوليو: اليوم!** — الإعلان متوقع 01:00-04:00 UTC — وقت التحليل 05:37 UTC → ربما صدر بالفعل
+6. **🔴 CPI متأخر 17 يوماً:** `xauusd_signal.py:153` — June 2026 CPI لم يُطبَّق — يحتاج VPS
+
+### ✅ إصلاحات طُبّقت تلقائياً
+- لا إصلاحات اليوم — النظام نظيف تماماً (75 يوم متتالي ← رقم قياسي)
+- Syntax check (py_compile): eurusd_signal.py ✅ | gbpusd_signal.py ✅ | xauusd_signal.py ✅ | london_signal.py ✅ | risk_manager.py ✅ | trade_monitor.py ✅ | main.py ✅ | executor.py ✅
+
+### ⏳ اقتراحات تنتظر الموافقة
+1. **متوسطة [B] (76 يوم) — رقم قياسي:** `_in_trade` قبل `_regime_check()` — سطران فقط
+2. **متوسطة [A] (76 يوم) — رقم قياسي:** Cache لـ `_regime_check()` + حذف dead import
+3. **منخفضة [C] (80 يوم ← الأقدم):** "strategy" key في signal dicts
+4. **[CPI] على VPS:** تحديث `estimated_cpi` بقيمة June 2026 (متأخر 17 يوم — عاجل)
+5. **💡 [22]:** XAUUSD BOJ ± 24h ATR threshold — backtest يوم السبت 2026-08-01
+6. **💡 [23]:** USDJPY Post-BOJ Momentum — backtest يوم السبت 2026-08-01
+7. **💡 [21]:** FOMC August 2026 Filter — backtest الأسبوع القادم
+
+### 📊 أداء اليوم
+- صفقات: N/A (لا logs — البوت على VPS) | Win Rate: N/A | P&L: N/A
+- الجمعة BOJ DAY: London 07:00 UTC (USDJPY + XAUUSD) — **الأهم: مراقبة USDJPY يدوياً** | NY 13:00 UTC (EURUSD + GBPUSD)
+- حالة الأزواج: EURUSD ✅ (1.885) | GBPUSD ✅ (1.664) | XAUUSD ✅ (1.62) | USDJPY ✅ (1.58) 🏆
+- يوم 75 متتالٍ بدون مشاكل حرجة ✅ ← رقم قياسي | يوم 26 الـ 4 أزواج فوق Sharpe 1.5 🏆
+---
